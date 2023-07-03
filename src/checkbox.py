@@ -24,7 +24,7 @@ def remove_overlapping_detections(
     remove = []
     for this_box_index, this_box in enumerate(detections):
         for that_box_index, that_box in enumerate(detections[this_box_index + 1 :]):
-            iou = bb_intersection_over_union(this_box, that_box)
+            iou = intersection_over_union(this_box, that_box)
             if iou > tolerance:
                 remove.append(this_box_index + that_box_index + 1)
     remove = sorted(list(set(remove)), reverse=True)
@@ -33,7 +33,7 @@ def remove_overlapping_detections(
     return detections
 
 
-def bb_intersection_over_union(box_a: List[float], box_b: List[float]):
+def intersection_over_union(box_a: List[float], box_b: List[float]):
     """Computes the bounding box intersection over union.
 
     Parameters:
