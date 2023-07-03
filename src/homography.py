@@ -90,11 +90,11 @@ def correct_image(image):
     """Uses a yolov8 model and a"""
     model = load_corner_detection_model()
     if image is not np.ndarray:
-        raise TypeError()
+        raise TypeError("Image is not a cv2 image.")
     corner_predictions = model(image)
     target_df = preds_to_df(corner_predictions)
     if len(target_df) < 4:
-        raise ValueError()
+        raise ValueError("Could not find all four image landmarks.")
     base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
 
     im_target = image.copy()
