@@ -2,12 +2,10 @@
 and returns a rectified image based on the landmarks identified."""
 
 from ultralytics import YOLO
-import cv2
+from cv2 import imread, warpPerspective, findHomography
 import pandas as pd
 import numpy as np
-from PIL import Image, ImageDraw
-from tqdm import tqdm
-from glob import glob
+from PIL import Image
 
 
 def get_homography_list(base_df, target_df):
@@ -40,7 +38,7 @@ def compute_homography(base_df, target_df):
     Returns : a homography matrix that transforms a target image into the base.
     """
     src_pts, dst_pts = get_homography_list(base_df, target_df)
-    homography, _ = cv2.findHomography(src_pts, dst_pts)
+    homography, _ = findHomography(src_pts, dst_pts)
     return homography
 
 
@@ -54,7 +52,7 @@ def warp_via_homography(im_base, im_target, homography_matrix):
     Returns : an image which has linear distortions corrected via homography transformation.
     """
     size = im_base.shape
-    im_warped = cv2.warpPerspective(im_target, homography_matrix, (size[1], size[0]))
+    im_warped = warpPerspective(im_target, homography_matrix, (size[1], size[0]))
     return im_warped
 
 
@@ -77,3 +75,29 @@ def preds_to_df(preds):
     boxes["conf"] = confs
 
     return boxes
+
+
+def load_corner_detection_model():
+    """Loads the yolov8 model for detecting corners.
+
+    Returns : a yolov8 model for detecting the four image corner landmarks.
+    """
+    model_filepath = "../models/four_corners_detector_yolov8s.pt"
+    return YOLO(model_filepath)
+
+
+def correct_image(image):
+    """Uses a yolov8 model and a"""
+    model = load_corner_detection_model()
+    # TODO: make sure the image is the right type (cv2?, PIL?).
+    corner_predictions = model(image)
+    target_df = preds_to_df(corner_predictions)
+    base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
+
+    # TODO: REALLY check the image is of the right type...
+    im_target = image.copy()
+    im_base = imread("../data/intraop_form_uncompressed.png")
+    homography_matrix = compute_homography(base_df, target_df)
+    warped_image = warp_via_homography(im_base, im_target, homography_matrix)
+
+    return Image.fromarray(warped_image)
