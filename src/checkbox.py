@@ -2,8 +2,13 @@
 Rwandan intraoperative Flowsheet."""
 
 from typing import List
+from PIL import Image, ImageDraw
+import pandas as pd
 
 CHECKBOX_TILE_DATA = {"ROWS": 2, "COLUMNS": 7, "STRIDE": 1 / 2}
+BLUE = (35, 45, 75, 100)
+ORANGE = (229, 114, 0, 100)
+CHECKBOX_MODEL = None
 
 
 def remove_overlapping_detections(
@@ -105,3 +110,238 @@ def tile_image(image):
             row.append(temp)
         tiles.append(row)
     return tiles
+
+
+def make_detections(image) -> dict:
+    """Makes and cleans the detections.
+
+    Returns:
+        A dictionary where the keys are 'bp_type' and 'box', indicating
+        whether the blood pressure detection is systolic or diastolic,
+        and what the normalized x, y, width, height of the box are.
+    """
+    detections = run_model(image)
+    detections = clean_raw_detections(image, detections)
+
+    return detections
+
+
+def run_model(image):
+    """Runs the BP yolo model on all tiles.
+
+    Parameters:
+        image - the image to run the model on.
+
+    Returns: The predictions from the YOLOv8 model.
+    """
+    predictions = []
+    for row in tile_image(image):
+        new_preds = []
+        for tile in row:
+            new_preds.append(list(CHECKBOX_MODEL.predict(tile))[0])
+        predictions.append(new_preds)
+    return predictions
+
+
+def clean_raw_detections(image, detections):
+    """Cleans the raw detections from the model.
+
+    Parameters:
+        detections -
+    """
+    detections = map_raw_detections_to_full_image(image, detections)
+    detections = remove_non_square_detections(detections)
+    detections = remove_overlapping_detections(detections)
+    return detections
+
+
+def map_raw_detections_to_full_image(image, detections):
+    """Maps the coordinates of the raw detections to where they are on the full image."""
+    ROWS = 2
+    COLUMNS = 7
+    mapped_boxes = []
+    im_width, im_height = image.size
+    for ix, col in enumerate(detections):
+        for iy, preds in enumerate(col):
+            shift_x = ix / COLUMNS
+            shift_y = iy / ROWS
+            for ix, detection in enumerate(preds.boxes.xywhn):
+                confidence = float(preds.boxes[ix].conf)
+                checked = bool(preds.boxes[ix].cls)
+                x = (float(detection[0]) / (COLUMNS / 2)) + shift_x
+                y = (float(detection[1]) / (ROWS / 2)) + shift_y
+                w = float(detection[2]) / (COLUMNS / 2)
+                h = float(detection[3]) / (ROWS / 2)
+                mapped_boxes.append(
+                    (
+                        im_width * (x - (w / 2)),
+                        im_height * (y + (h / 2)),
+                        im_width * (x + (w / 2)),
+                        im_height * (y - (h / 2)),
+                        checked,
+                        confidence,
+                    )
+                )
+    return mapped_boxes
+
+
+def remove_non_square_detections(detections, threshold: float = 0.25):
+    """Removes detections whose percent difference between height and
+    width is greater than the threshold.
+
+
+    """
+    remove = []
+    for index, box in enumerate(detections):
+        left, right = min(box[0], box[2]), max(box[0], box[2])
+        top, bottom = min(box[1], box[3]), max(box[1], box[3])
+        width = left - right
+        height = top - bottom
+        if abs((width - height) / ((height + width) / 2)) > threshold:
+            remove.append(index)
+    for index in sorted(remove, reverse=True):
+        detections.pop(index)
+    return detections
+
+
+def show_detections(image, detections):
+    """Shows an image of the detections."""
+    new = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(new)
+    for _, (_, val) in enumerate(detections.items()):
+        detection = val
+        bp_type = detection["type"]
+        box = detection["box"]
+        color = BLUE if bp_type == "systolic" else ORANGE
+        draw.rectangle(box, outline="black", width=2, fill=color)
+    out = Image.alpha_composite(image.convert("RGBA"), new)
+    return out
+
+
+def read_checkbox_values(detections):
+    """Creates values from the raw detections.
+
+    Parameters:
+        detections - the model detections.
+
+    Returns: A dictionary with (checkbox name(str):True/False(bool)).
+    """
+    dataframe = make_detections_df(detections)
+    dataframe = add_section_column_to_df(dataframe)
+    dataframe = add_box_name_column_to_df(dataframe)
+    keys = list(dataframe["name"])
+    values = list(dataframe["checked"])
+    return {keys[ix]: values[ix] for ix in range(0, len(keys))}
+
+
+def make_detections_df(detections):
+    """Makes a dataframe from the detections.
+
+    Parameters:
+        detections - the list of the detections from make_detections()
+
+    Returns: A sorted dataframe with the detections.
+    """
+    columns = ["x1", "y1", "x2", "y2", "checked", "confidence"]
+    dataframe = pd.DataFrame(detections, columns=columns)
+    dataframe = dataframe.sort_values(["x1"])
+    return dataframe
+
+
+def add_section_column_to_df(dataframe):
+    """Adds the checkbox section of the detection to the dataframe.
+
+    Parameters:
+        dataframe - the dataframe to add the section column to.
+
+    Returns: The dataframe with a column for the checkbox section.
+    """
+    sections = [
+        ["patient_safety"] * 4,
+        ["mask_ventilation"] * 3,
+        ["airway"] * 4,
+        ["airway_placement_aid"] * 3,
+        ["airway_placement_aid_used"] * 1,
+        ["airway_placement_aid_not_used"] * 1,
+        ["lra_used"] * 1,
+        ["lra_not_used"] * 1,
+        ["tubes_and_lines"] * 4,
+        ["monitoring_details_left"] * 5,
+        ["monitoring_details_right"] * 5,
+        ["patient_position_left"] * 4,
+        ["patient_position_right"] * 3,
+    ]
+    section_order = [
+        [1] * 4,
+        [2] * 3,
+        [3] * 4,
+        [4] * 3,
+        [5] * 1,
+        [6] * 1,
+        [7] * 1,
+        [8] * 1,
+        [9] * 4,
+        [10] * 5,
+        [11] * 5,
+        [12] * 4,
+        [13] * 3,
+    ]
+    sections = [x for y in sections for x in y]
+    section_order = [x for y in section_order for x in y]
+    dataframe["section"] = sections
+    dataframe["section_order"] = section_order
+    return dataframe
+
+
+def add_box_name_column_to_df(dataframe):
+    """Adds the checkbox name of the detection to the dataframe.
+
+    Parameters:
+        dataframe - the dataframe to add the name column to.
+
+    Returns: The dataframe with a column specifying the box name.
+    """
+    names = [
+        "eye_protection",
+        "warming",
+        "ted_stockings",
+        "safety_checklist",
+        "easy_ventilation",
+        "ventilation_with_adjunct",
+        "difficult_ventilation",
+        "natural_face_mask",
+        "lma",
+        "ett",
+        "trach",
+        "fibroscope",
+        "brochoscope",
+        "apa_other",
+        "apa_used",
+        "apa_not_used",
+        "lra_used",
+        "lra_not_used",
+        "peripheral_iv_line",
+        "central_iv_line",
+        "urinary_catheter",
+        "gastric_tube",
+        "ecg",
+        "nibp",
+        "spo2",
+        "etco2",
+        "stethoscope",
+        "temperature",
+        "nmt",
+        "urine_output",
+        "arterial_bp",
+        "md_other",
+        "supine",
+        "prone",
+        "litholomy",
+        "sitting",
+        "trendelenburg",
+        "fowler",
+        "lateral",
+    ]
+    dataframe = dataframe.sort_values(["section_order", "y1"])
+    dataframe["name"] = names
+    return dataframe
