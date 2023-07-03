@@ -89,12 +89,14 @@ def load_corner_detection_model():
 def correct_image(image):
     """Uses a yolov8 model and a"""
     model = load_corner_detection_model()
-    # TODO: make sure the image is the right type (cv2?, PIL?).
+    if image is not np.ndarray:
+        raise TypeError()
     corner_predictions = model(image)
     target_df = preds_to_df(corner_predictions)
+    if len(target_df) < 4:
+        raise ValueError()
     base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
 
-    # TODO: REALLY check the image is of the right type...
     im_target = image.copy()
     im_base = imread("../data/intraop_form_uncompressed.png")
     homography_matrix = compute_homography(base_df, target_df)
