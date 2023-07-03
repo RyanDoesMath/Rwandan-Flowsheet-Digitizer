@@ -146,7 +146,7 @@ def run_model(image):
     for row in tile_image(image):
         new_preds = []
         for tile in row:
-            new_preds.append(list(CHECKBOX_MODEL.predict(tile))[0])
+            new_preds.append(list(CHECKBOX_MODEL.predict(tile, verbose=False))[0])
         predictions.append(new_preds)
     return predictions
 
