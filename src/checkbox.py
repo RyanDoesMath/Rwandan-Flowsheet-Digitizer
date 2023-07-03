@@ -56,13 +56,24 @@ def bb_intersection_over_union(box_a: List[float], box_b: List[float]):
 
 
 def get_x_coords(width: float):
-    """Gets the x coordinates on the larger image for a tile."""
+    """Gets the x coordinates for where to crop a tile.
+
+    Parameters:
+        width - the width of the image to tile.
+
+    Returns : The x coordinates for all the tiles.
+    """
     columns = CHECKBOX_TILE_DATA["COLUMNS"]
     return [int((width * i / columns)) for i in range(0, columns)] + [width]
 
 
 def get_y_coords(height: float):
-    """Gets the y coordinates on the larger image for a tile."""
+    """Gets the y coordinates for where to crop a tile.
+
+    Parameters:
+        height - the height of the image to tile.
+
+    Returns : The y coordinates for all the tiles."""
     rows = CHECKBOX_TILE_DATA["ROWS"]
     return [int((height * i / rows)) for i in range(0, rows)] + [height]
 
@@ -87,8 +98,8 @@ def tile_image(image):
                 (
                     x_coords[index_x],
                     y_coords[index_y],
-                    x_coords[index_x + 2],
-                    y_coords[index_y + 2],
+                    x_coords[index_x + int(1 / stride)],
+                    y_coords[index_y + int(1 / stride)],
                 )
             )
             row.append(temp)
