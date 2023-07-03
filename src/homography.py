@@ -86,10 +86,10 @@ def load_corner_detection_model():
     return YOLO(model_filepath)
 
 
-def correct_image(image):
+def correct_image(image: np.ndarray):
     """Uses a yolov8 model and a"""
     model = load_corner_detection_model()
-    if image is not np.ndarray:
+    if not isinstance(image, np.ndarray):
         raise TypeError("Image is not a cv2 image.")
     corner_predictions = model(image)
     target_df = preds_to_df(corner_predictions)
