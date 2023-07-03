@@ -4,11 +4,12 @@ Rwandan intraoperative Flowsheet."""
 from typing import List
 from PIL import Image, ImageDraw
 import pandas as pd
+from ultralytics import YOLO
 
 CHECKBOX_TILE_DATA = {"ROWS": 2, "COLUMNS": 7, "STRIDE": 1 / 2}
 BLUE = (35, 45, 75, 100)
 ORANGE = (229, 114, 0, 100)
-CHECKBOX_MODEL = None
+CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8.pt")
 
 
 def remove_overlapping_detections(
@@ -157,21 +158,21 @@ def clean_raw_detections(image, detections):
 
 def map_raw_detections_to_full_image(image, detections):
     """Maps the coordinates of the raw detections to where they are on the full image."""
-    ROWS = 2
-    COLUMNS = 7
+    rows = CHECKBOX_TILE_DATA["ROWS"]
+    columns = CHECKBOX_TILE_DATA["COLUMNS"]
     mapped_boxes = []
     im_width, im_height = image.size
     for ix, col in enumerate(detections):
         for iy, preds in enumerate(col):
-            shift_x = ix / COLUMNS
-            shift_y = iy / ROWS
+            shift_x = ix / columns
+            shift_y = iy / rows
             for ix, detection in enumerate(preds.boxes.xywhn):
                 confidence = float(preds.boxes[ix].conf)
                 checked = bool(preds.boxes[ix].cls)
-                x = (float(detection[0]) / (COLUMNS / 2)) + shift_x
-                y = (float(detection[1]) / (ROWS / 2)) + shift_y
-                w = float(detection[2]) / (COLUMNS / 2)
-                h = float(detection[3]) / (ROWS / 2)
+                x = (float(detection[0]) / (columns / 2)) + shift_x
+                y = (float(detection[1]) / (rows / 2)) + shift_y
+                w = float(detection[2]) / (columns / 2)
+                h = float(detection[3]) / (rows / 2)
                 mapped_boxes.append(
                     (
                         im_width * (x - (w / 2)),
@@ -189,7 +190,10 @@ def remove_non_square_detections(detections, threshold: float = 0.25):
     """Removes detections whose percent difference between height and
     width is greater than the threshold.
 
-
+    Parameters :
+        detections - a list of detection boxes.
+        threshold - a float to determine how non-square a detection must
+                    be to be removed.
     """
     remove = []
     for index, box in enumerate(detections):
