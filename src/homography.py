@@ -2,7 +2,6 @@
 and returns a rectified image based on the landmarks identified."""
 
 from ultralytics import YOLO
-import matplotlib.pyplot as plt
 import cv2
 import pandas as pd
 import numpy as np
@@ -57,3 +56,24 @@ def warp_via_homography(im_base, im_target, homography_matrix):
     size = im_base.shape
     im_warped = cv2.warpPerspective(im_target, homography_matrix, (size[1], size[0]))
     return im_warped
+
+
+def preds_to_df(preds):
+    """Makes a dataframe from yolov8 predictions.
+
+    Parameters :
+        preds - the predictions from a yolov8 model.
+
+    Returns : a dataframe version of the predictions.
+    """
+    bbox_classes = [preds[0].names[float(x)] for x in preds[0].boxes.cls]
+    boxes = [[float(y) for y in x] for x in preds[0].boxes.xyxy]
+    confs = [float(x) for x in preds[0].boxes.conf]
+
+    boxes = pd.DataFrame(
+        boxes, columns=["bbox_x", "bbox_y", "bbox_width", "bbox_height"]
+    )
+    boxes["label_name"] = bbox_classes
+    boxes["conf"] = confs
+
+    return boxes
