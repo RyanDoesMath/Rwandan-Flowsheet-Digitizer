@@ -12,6 +12,19 @@ ORANGE = (229, 114, 0, 100)
 CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8.pt")
 
 
+def read_checkbox_data(image):
+    """Reads the checkbox data from an image of the checkbox section.
+
+    Parameters :
+        image - a PIL image of the checkbox section.
+
+    Returns :
+    """
+    detections = make_detections(image)
+    values = read_checkbox_values(detections)
+    return values
+
+
 def remove_overlapping_detections(
     detections: List[List[float]], tolerance: float = 0.3
 ):
@@ -51,10 +64,8 @@ def intersection_over_union(box_a: List[float], box_b: List[float]):
     )
     box_a_area = (box_a[2] - box_a[0] + 1) * (box_a[1] - box_a[3] + 1)
     box_b_area = (box_b[2] - box_b[0] + 1) * (box_b[1] - box_b[3] + 1)
-    intersection_over_union = intersection_area / float(
-        box_a_area + box_b_area - intersection_area
-    )
-    return intersection_over_union
+    iou = intersection_area / float(box_a_area + box_b_area - intersection_area)
+    return iou
 
 
 def get_x_coords(width: float):
