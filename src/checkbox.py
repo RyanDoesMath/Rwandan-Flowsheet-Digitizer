@@ -3,6 +3,8 @@ Rwandan intraoperative Flowsheet."""
 
 from typing import List
 
+CHECKBOX_TILE_DATA = {"ROWS": 2, "COLUMNS": 7, "STRIDE": 1 / 2}
+
 
 def remove_overlapping_detections(
     detections: List[List[float]], tolerance: float = 0.3
@@ -51,3 +53,44 @@ def bb_intersection_over_union(box_a: List[float], box_b: List[float]):
     iou = inter_area / float(box_a_area + box_b_area - inter_area)
     # return the intersection over union value
     return iou
+
+
+def get_x_coords(width: float):
+    """Gets the x coordinates on the larger image for a tile."""
+    columns = CHECKBOX_TILE_DATA["COLUMNS"]
+    return [int((width * i / columns)) for i in range(0, columns)] + [width]
+
+
+def get_y_coords(height: float):
+    """Gets the y coordinates on the larger image for a tile."""
+    rows = CHECKBOX_TILE_DATA["ROWS"]
+    return [int((height * i / rows)) for i in range(0, rows)] + [height]
+
+
+def tile_image(image):
+    """Segments the image into tiles.
+
+    Parameters:
+        image - the image to tile.
+
+    Returns: A 2d array of tiles.
+    """
+    stride = CHECKBOX_TILE_DATA["STRIDE"]
+    tiles = []
+    width, height = image.size
+    x_coords = get_x_coords(width)
+    y_coords = get_y_coords(height)
+    for index_x in range(len(x_coords[0 : -int(1 / stride)])):
+        row = []
+        for index_y in range(len(y_coords[0 : -int(1 / stride)])):
+            temp = image.crop(
+                (
+                    x_coords[index_x],
+                    y_coords[index_y],
+                    x_coords[index_x + 2],
+                    y_coords[index_y + 2],
+                )
+            )
+            row.append(temp)
+        tiles.append(row)
+    return tiles
