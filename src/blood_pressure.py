@@ -31,11 +31,6 @@ def extract(image) -> dict:
     return bp_pred
 
 
-def post_process(bounding_boxes) -> dict:
-    """Runs methods to make bounding boxes into a dictionary of bp data."""
-    pass
-
-
 def filter_and_adjust_bp_predictions(
     systolic_predictions, diastolic_predictions, image
 ):
@@ -536,7 +531,7 @@ def show_detections(image):
     """Draws the bp detections on the image."""
     extractions = extract(image)
     img = cropped_im.copy()
-    draw = ImageDraw.Draw(im)
+    draw = ImageDraw.Draw(img)
     for _, det in extractions.iterrows():
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
         draw.rectangle(box, outline="red")
