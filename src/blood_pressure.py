@@ -538,3 +538,17 @@ def show_detections(image):
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
         draw.rectangle(box, outline="red")
     return im
+
+
+def cv2_to_pil(img):
+    """Converts a cv2 image to a PIL image."""
+    color_converted = cv2.cvtColor(cv2.bitwise_not(img), cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(color_converted)
+    return pil_image
+
+
+def pil_to_cv2(img):
+    """Convers a PIL image to a cv2 image."""
+    open_cv_image = np.array(img)
+    open_cv_image = open_cv_image[:, :, ::-1].copy()  # Convert RGB to BGR
+    return open_cv_image
