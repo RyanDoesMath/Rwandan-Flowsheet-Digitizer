@@ -1,14 +1,25 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
+from PIL import Image
+import cv2
+import pandas as pd
+import numpy as np
+from ultralytics import YOLO
+
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
+TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector.pt")
+
 
 def extract(image) -> dict:
     """Runs methods in order to extract the blood pressure."""
     image = normalize(image)
     image = crop_legend_out(image)
-    systolic_pred = model(image).pandas().xyxy[0]
+    systolic_pred = BLOOD_PRESSURE_MODEL(image).pandas().xyxy[0]
     diastolic_pred = (
-        model(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)).pandas().xyxy[0]
+        BLOOD_PRESSURE_MODEL(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM))
+        .pandas()
+        .xyxy[0]
     )
     systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
         systolic_pred, diastolic_pred, image
@@ -47,14 +58,10 @@ def combine_predictions(systolic_predictions, diastolic_predictions):
 
 def crop_legend_out(image):
     """Crops out the legend from the bp image."""
-    thirty_twohundred_model = load_model(
-        "../Flowsheet_class/model_files/30_200_detector.pt"
-    )
-    pred = thirty_twohundred_model(image).pandas().xyxy[0]
+    pred = TWOHUNDRED_THIRTY_MODEL(image).pandas().xyxy[0]
     two_hundred = pred[pred["name"] == "200"].iloc[0]
     thirty = pred[pred["name"] == "30"].iloc[0]
     bbox = (two_hundred.xmax, two_hundred.ymin, image.size[0], thirty.ymax + 3)
-    cropped_im = image.crop(bbox)
     return image.crop(bbox)
 
 
@@ -69,7 +76,7 @@ def normalize(image):
     return im_normalized
 
 
-def bb_intersection(boxA, boxB):
+def bb_intersection(box_a, box_b):
     """Finds the bounding box intersection for two rectangles.
 
     Parameters:
@@ -79,17 +86,17 @@ def bb_intersection(boxA, boxB):
     Returns: The area of intersection for the two bounding boxes.
     """
     # determine the (x, y)-coordinates of the intersection rectangle
-    left = max(boxA[0], boxB[0])
-    bottom = max(boxA[1], boxB[1])
-    right = min(boxA[2], boxB[2])
-    top = min(boxA[3], boxB[3])
+    left = max(box_a[0], box_b[0])
+    bottom = max(box_a[1], box_b[1])
+    right = min(box_a[2], box_b[2])
+    top = min(box_a[3], box_b[3])
 
     if left >= right and bottom >= top:
         return 0
 
     # compute the area of intersection rectangle
-    interArea = (right - left) * (top - bottom)
-    return interArea
+    area_of_intersection = (right - left) * (top - bottom)
+    return area_of_intersection
 
 
 def box_area(box):
@@ -104,17 +111,19 @@ def filter_bp_predictions(preds):
         preds - the pandas prediction dataframe from the yolo model.
     Returns: A pandas dataframe with less or no erroneous predictions.
     """
-    THRESHOLD = 0.5
+    threshold = 0.5
     temp = preds.copy()
     temp["flagged_for_removal"] = False
-    get_box = lambda row: (row.xmin, row.ymin, row.xmax, row.ymax)
 
-    for this_ix, this_row in preds.iterrows():
+    def get_box(row):
+        return (row.xmin, row.ymin, row.xmax, row.ymax)
+
+    for _, this_row in preds.iterrows():
         this_box = get_box(this_row)
         for that_ix, that_row in preds.iterrows():
             that_box = get_box(that_row)
             percent_overlap = bb_intersection(this_box, that_box) / box_area(this_box)
-            if percent_overlap > THRESHOLD and percent_overlap != 1:
+            if percent_overlap > threshold and percent_overlap != 1:
                 temp.at[that_ix, "flagged_for_removal"] = True
 
     detections_filtered = remove_filtered_detections(temp)
@@ -148,23 +157,20 @@ def find_bp_value_for_bbox(image, preds):
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
-    predictions = preds.copy()
     predicted_bps = []
-    H = get_bp_matrix(image)
-    width, height = image.size
+    bp_matrix = get_bp_matrix(image)
     for _, row in preds.iterrows():
         cntr = compute_center(row, len(H[0]))
-        predicted_bps.append(H[cntr[0]][cntr[1]])
+        predicted_bps.append(bp_matrix[cntr[0]][cntr[1]])
     return predicted_bps
 
 
 def get_bp_matrix(image):
     """Calls methods to get the blood pressure matrix from an image."""
-    H = get_blood_pressure_matrix(self.binarized_horizontal_lines(image))
-    H = bp_matrix_to_np_arrays(H)
-    H = np.fliplr(H)
-    bp_matrix = H
-    return H
+    bp_matrix = get_blood_pressure_matrix(binarized_horizontal_lines(image))
+    bp_matrix = bp_matrix_to_np_arrays(bp_matrix)
+    bp_matrix = np.fliplr(bp_matrix)
+    return bp_matrix
 
 
 def get_y_axis_histogram(image):
@@ -184,9 +190,8 @@ def get_y_axis_histogram(image):
     Returns:
         A normalized pixel histogram of x axis values cast to the y axis.
     """
-    temp = image.copy().convert("L")  # convert to grayscale
-    y_axis_hist = np.sum(np.array(temp) / 255, axis=1)  # invert image and count pixels.
-    # y_axis_hist = y_axis_hist/max(y_axis_hist) # normalize
+    grayscale_image = image.copy().convert("L")
+    y_axis_hist = np.sum(np.array(grayscale_image) / 255, axis=1)
     return y_axis_hist
 
 
@@ -312,12 +317,11 @@ def get_blood_pressure_matrix(image, window_size: float = 0.6, stride: float = 0
     Returns:
         An array with the blood pressure values from left to right.
     """
-    im = image.copy()
-    width, height = im.size
+    width, height = image.size
     window = [0, 0, int(width * window_size), height]
     prediction_matrix = []
     while window[2] < width:
-        bps = get_bps_at_y_pixel_values(im.crop(window).convert("L"))
+        bps = get_bps_at_y_pixel_values(image.crop(window).convert("L"))
         new_values = [bps] * int(width * stride)
         prediction_matrix.append(new_values)
         window[2] += width * stride
@@ -345,21 +349,21 @@ def binarized_horizontal_lines(img):
     gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
     # greyscale to binary
     gray = cv2.bitwise_not(gray)
-    bw = cv2.adaptiveThreshold(
+    binarized = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
     )
 
-    horizontal = np.copy(bw)
+    horizontal = np.copy(binarized)
     # Specify size on horizontal axis
     cols = horizontal.shape[1]
     horizontal_size = cols // 30
     # Create structure element for extracting horizontal lines through morphology operations
-    horizontalStructure = cv2.getStructuringElement(
+    horizontal_structure = cv2.getStructuringElement(
         cv2.MORPH_RECT, (horizontal_size, 1)
     )
     # Apply morphology operations
-    horizontal = cv2.erode(horizontal, horizontalStructure)
-    horizontal = cv2.dilate(horizontal, horizontalStructure, iterations=4)
+    horizontal = cv2.erode(horizontal, horizontal_structure)
+    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=4)
     color_converted = cv2.cvtColor(horizontal, cv2.COLOR_BGR2RGB)
     horizontal = Image.fromarray(color_converted)
     return horizontal
@@ -387,10 +391,10 @@ def binarized_vertical_lines(img):
     rows = vertical.shape[0]
     verticalsize = rows // 30
     # Create structure element for extracting vertical lines through morphology operations
-    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
+    vertical_structure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
     # Apply morphology operations
-    vertical = cv2.erode(vertical, verticalStructure, iterations=2)
-    vertical = cv2.dilate(vertical, verticalStructure, iterations=2)
+    vertical = cv2.erode(vertical, vertical_structure, iterations=2)
+    vertical = cv2.dilate(vertical, vertical_structure, iterations=2)
     return vertical
 
 
@@ -445,16 +449,15 @@ def get_minutes_array(image):
     y_axis_hist = [x / max(y_axis_hist) for x in y_axis_hist]
 
     five_minute_markers = np.array([1 if y >= 0.3 else 0 for y in y_axis_hist])
-    timestamps_before_closest = five_minute_markers
     minute = 0
     temp = five_minute_markers.copy()
     previous = 0
     counter = 0
-    for ix, current in enumerate(five_minute_markers):
+    for index, current in enumerate(five_minute_markers):
         if current == 1 and previous == 0:
-            temp[ix] = minute
+            temp[index] = minute
         elif current == 1 and previous == 1:
-            temp[ix] = minute
+            temp[index] = minute
         elif current == 0 and previous == 1:
             minute += 5
         previous = current
@@ -464,34 +467,32 @@ def get_minutes_array(image):
     closest_left = 0
     counter_right = 0
     counter_left = 0
-    cont = False
     final_array = temp.copy()
-    for ix, i in enumerate(temp):
+    for index, i in enumerate(temp):
         if i != 0:
             continue
-        while closest_right == 0 and ix + counter_right < len(temp):
-            if ix + counter > len(temp):
+        while closest_right == 0 and index + counter_right < len(temp):
+            if index + counter > len(temp):
                 break
-            closest_right = temp[ix + counter_right]
+            closest_right = temp[index + counter_right]
             counter_right += 1
 
-        while closest_left == 0 and ix - counter_left > 0:
-            if ix - counter < 0:
+        while closest_left == 0 and index - counter_left > 0:
+            if index - counter < 0:
                 break
-            closest_left = temp[ix - counter_left]
+            closest_left = temp[index - counter_left]
             counter_left += 1
 
         if counter_right < counter_left:
-            final_array[ix] = closest_right
+            final_array[index] = closest_right
         elif counter_left <= counter_right:
-            final_array[ix] = closest_left
+            final_array[index] = closest_left
         closest_right = 0
         closest_left = 0
         counter_right = 0
         counter_left = 0
 
     final_array = [0 if i == 1 else i for i in final_array]
-    timestamps = final_array
     return final_array
 
 
@@ -524,8 +525,8 @@ def filter_duplicate_detections_for_one_bp_type(detections):
         if len(temp) == 1:
             continue
         temp = temp.sort_values("confidence", ascending=False)
-        for ix in temp.index[1:]:
-            ix_to_remove.append(ix)
+        for index in temp.index[1:]:
+            ix_to_remove.append(index)
     return bps[~(bps.index.isin(ix_to_remove))]
 
 
@@ -533,7 +534,7 @@ def show_detections(image):
     extractions = extract(image)
     im = cropped_im.copy()
     draw = ImageDraw.Draw(im)
-    for ix, det in extractions.iterrows():
+    for _, det in extractions.iterrows():
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
         draw.rectangle(box, outline="red")
     return im
