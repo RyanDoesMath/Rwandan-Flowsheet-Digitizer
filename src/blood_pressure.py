@@ -1,7 +1,7 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
-from PIL import Image
+from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
 import numpy as np
@@ -67,8 +67,8 @@ def crop_legend_out(image):
 
 def normalize(image):
     """Normalizes the image for better prediction."""
-    im = pil_to_cv2(image)
-    img_normalized = cv2.normalize(im, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    img = pil_to_cv2(image)
+    img_normalized = cv2.normalize(img, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     readjusted = img_normalized * 255
     readjusted = readjusted.astype(np.uint8)
     im_normalized = Image.fromarray(readjusted)
@@ -213,22 +213,22 @@ def assign_bp_to_array_vals(thresholded_array):
         A version of the array with the correct blood pressures in place of the ones.
     """
     bp_at_pixel = thresholded_array.copy()
-    bp = 200  # highest BP on sheet
+    blood_pressure = 200  # highest BP on sheet
     prev = 0  # tracks previous pixel
 
-    for i in range(len(bp_at_pixel)):
-        pix_val = bp_at_pixel[i]
+    for i, value in enumerate(bp_at_pixel):
+        pix_val = value
         if pix_val == 1 and prev == 0:
             # begins swapping section of ones with bp value.
             prev = 1
-            bp_at_pixel[i] = bp
+            bp_at_pixel[i] = blood_pressure
         elif pix_val == 1 and prev == 1:
             # continues swapping section of ones with bp value.
-            bp_at_pixel[i] = bp
+            bp_at_pixel[i] = blood_pressure
         elif pix_val == 0 and prev == 1:
             # ends swapping and reduces BP for the next section of ones.
             prev = 0
-            bp -= 10
+            blood_pressure -= 10
 
     return bp_at_pixel
 
@@ -238,8 +238,8 @@ def fill_gaps_in_bp_array(array_with_gaps):
 
     EX:
     input:
-    [0, 0, 0, 200, 200, 200, 0, 0, 0, 190, 190, 0, 0, ..., 0, 40, 40, 40, 0, 0, 0, 30, 0, 0]
-    [0, 0, 0, 200, 200, 200, 197.5, 195, 192.5, 190, 190, 189, 188, ..., 41, 40, 40, 40, 37.5, 35, 32.5, 30, 0, 0]
+    [0, 0, 0, 200, 200, 200, 0, 0, 0, 190, 190, 0, 0, ..., ]
+    [0, 0, 0, 200, 200, 200, 197.5, 195, 192.5, 190, 190, 189, 188, ...,]
 
     Parameters:
         array_with_gaps:
@@ -254,8 +254,8 @@ def fill_gaps_in_bp_array(array_with_gaps):
     begin_count = False
     bottom = 200
     prev = 0
-    for i in range(len(bp_at_pixel)):
-        pix_val = bp_at_pixel[i]
+    for i, value in enumerate(bp_at_pixel):
+        pix_val = value
         if pix_val == 0 and prev != 0:
             begin_count = True
         if pix_val != 0 and prev == 0:
@@ -303,8 +303,8 @@ def predict_blood_pressure_from_coordinates(coordinates: tuple):
     bps = [0] * int((height - thirty.ymax)) + list(
         bps
     )  # offset for pixels above the "200" marker.
-    y = int(coordinates[3])
-    return bps[y]
+    y_value = int(coordinates[3])
+    return bps[y_value]
 
 
 def get_blood_pressure_matrix(image, window_size: float = 0.6, stride: float = 0.1):
@@ -399,6 +399,7 @@ def binarized_vertical_lines(img):
 
 
 def bp_matrix_to_np_arrays(bp_matrix):
+    """Converts the bp matrix to a 2d numpy array."""
     ret_arr = []
     for i in bp_matrix:
         next_line = []
@@ -409,6 +410,7 @@ def bp_matrix_to_np_arrays(bp_matrix):
 
 
 def compute_center(row, height):
+    """Computes the center of a row given the height of the image."""
     ymin = height - row.ymin
     ymax = height - row.ymax
     xmin, xmax = row.xmin, row.xmax
@@ -531,13 +533,14 @@ def filter_duplicate_detections_for_one_bp_type(detections):
 
 
 def show_detections(image):
+    """Draws the bp detections on the image."""
     extractions = extract(image)
-    im = cropped_im.copy()
+    img = cropped_im.copy()
     draw = ImageDraw.Draw(im)
     for _, det in extractions.iterrows():
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
         draw.rectangle(box, outline="red")
-    return im
+    return img
 
 
 def cv2_to_pil(img):
