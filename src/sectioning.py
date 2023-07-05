@@ -30,7 +30,7 @@ def extract_sections(image) -> dict:
     preds = SECTIONING_MODEL(image, verbose=False)
     preds_df = make_predictions_into_dataframe(preds)
     preds_df = filter_section_predictions(preds)
-    for box in preds[0].boxes:
+    for index, box in preds_df.iterrows():
         pass
 
 
@@ -42,7 +42,13 @@ def make_predictions_into_dataframe(preds):
 
     Returns : the predictions in a pandas dataframe.
     """
-    pass
+    cols = ["left", "top", "right", "bottom", "confidence", "class"]
+    preds_df = pd.DataFrame(columns=cols)
+    for box in preds[0].boxes.data:
+        new_row = pd.DataFrame(data=[box.tolist()], columns=cols)
+        preds_df = pd.concat([preds_df, new_row])
+    preds_df.reset_index(inplace=True, drop=True)
+    return preds_df
 
 
 def filter_section_predictions(preds_df):
