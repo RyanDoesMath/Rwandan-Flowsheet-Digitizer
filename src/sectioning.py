@@ -2,7 +2,6 @@
 individual sections for other modules to be able to use."""
 
 from ultralytics import YOLO
-from PIL import Image
 import pandas as pd
 
 SECTIONING_MODEL = YOLO("../models/section_cropper_yolov8.pt")
@@ -29,9 +28,13 @@ def extract_sections(image) -> dict:
     """
     preds = SECTIONING_MODEL(image, verbose=False)
     preds_df = make_predictions_into_dataframe(preds)
-    preds_df = filter_section_predictions(preds)
-    for index, box in preds_df.iterrows():
-        pass
+    preds_df = filter_section_predictions(preds_df)
+    sections = {}
+    for _, box in preds_df.iterrows():
+        crop_coords = box[["left", "top", "right", "bottom"]].tolist()
+        name = box["class"]
+        sections[name] = image.crop(crop_coords)
+    return sections
 
 
 def make_predictions_into_dataframe(preds):
