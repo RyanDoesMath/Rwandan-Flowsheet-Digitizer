@@ -43,9 +43,13 @@ def make_predictions_into_dataframe(preds):
     Returns : the predictions in a pandas dataframe.
     """
     cols = ["left", "top", "right", "bottom", "confidence", "class"]
+    names_dict = preds[0].names
+    index_of_class_in_box = -1
     preds_df = pd.DataFrame(columns=cols)
     for box in preds[0].boxes.data:
-        new_row = pd.DataFrame(data=[box.tolist()], columns=cols)
+        data = box.tolist()
+        data[index_of_class_in_box] = names_dict[data[index_of_class_in_box]]
+        new_row = pd.DataFrame(data=[data], columns=cols)
         preds_df = pd.concat([preds_df, new_row])
     preds_df.reset_index(inplace=True, drop=True)
     return preds_df
