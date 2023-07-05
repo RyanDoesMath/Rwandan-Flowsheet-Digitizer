@@ -63,4 +63,10 @@ def filter_section_predictions(preds_df):
 
     Returns : a filtered dataframe with a unique row per predicted section.
     """
-    pass
+    changed_df = pd.DataFrame(columns=preds_df.columns)
+    for class_name in preds_df["class"].unique().tolist():
+        temp_df = preds_df[preds_df["class"] == class_name]
+        temp_df.sort_values("confidence", ascending=False)
+        if len(temp_df) > 0:
+            changed_df = pd.concat([changed_df, pd.DataFrame(temp_df.iloc[0]).T])
+    return changed_df
