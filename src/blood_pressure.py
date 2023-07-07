@@ -6,13 +6,22 @@ import cv2
 import pandas as pd
 import numpy as np
 from ultralytics import YOLO
+from typing import List, Tuple, Dict
+
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector.pt")
 
 
 def extract(image) -> dict:
-    """Runs methods in order to extract the blood pressure."""
+    """Runs methods in order to extract the blood pressure.
+
+    Args :
+        image - a PIL image that has been deshadowed and normalized.
+
+    Returns : a dictionary of detections where the keys are timestamps,
+              and the values are tuples with (systolic, diastolic).
+    """
     image = normalize(image)
     image = crop_legend_out(image)
     systolic_pred = BLOOD_PRESSURE_MODEL(image).pandas().xyxy[0]
