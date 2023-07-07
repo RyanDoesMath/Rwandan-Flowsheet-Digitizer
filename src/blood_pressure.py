@@ -434,35 +434,6 @@ def binarized_horizontal_lines(img):
     return horizontal
 
 
-def binarized_vertical_lines(img):
-    """Binarizes an image and removes everything except vertical lines.
-
-    Parameters:
-        img - the image to binarize and remove all non-vertical lines from.
-
-    Returns: A version of the image that is binarized and has only vertical lines."""
-    cv2_img = np.array(img)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    # convert to greyscale
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    # greyscale to binary
-    gray = cv2.bitwise_not(gray)
-    bw = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
-    )
-    vertical = np.copy(bw)
-
-    # Specify size on vertical axis
-    rows = vertical.shape[0]
-    verticalsize = rows // 30
-    # Create structure element for extracting vertical lines through morphology operations
-    vertical_structure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
-    # Apply morphology operations
-    vertical = cv2.erode(vertical, vertical_structure, iterations=2)
-    vertical = cv2.dilate(vertical, vertical_structure, iterations=2)
-    return vertical
-
-
 def bp_matrix_to_np_arrays(bp_matrix):
     """Converts the bp matrix to a 2d numpy array."""
     ret_arr = []
@@ -480,87 +451,6 @@ def compute_center(row, height):
     ymax = height - row.ymax
     xmin, xmax = row.xmin, row.xmax
     return (int(xmax - ((xmax - xmin) / 2)), int(ymin - ((ymin - ymax) / 2)))
-
-
-def find_timestamp_for_bbox(image, preds):
-    """Gets the timestamp for each bounding box in the predictions.
-
-    Parameters:
-        image - The image to find the timestamp for.
-        preds - A dataframe with the bounding boxes.
-
-    Returns: A list of timestamps to put into a column of the dataframe.
-    """
-    predicted_timestamps = []
-    timestamp_at_pixel = get_minutes_array(image)
-
-    for _, row in preds.iterrows():
-        value = timestamp_at_pixel[int(((row.xmax - row.xmin) / 2) + row.xmin)]
-        predicted_timestamps.append(value)
-
-    return predicted_timestamps
-
-
-def get_minutes_array(image):
-    """Gets a 1d array with the minute for each pixel value on the x axis of the image.
-
-    This method is trash :(
-
-    Parameters:
-        image - the image to predict on.
-
-    Returns - a 1d array with the minute for each pixel value on the x axis of the image.
-    """
-    vertical = binarized_vertical_lines(image)
-    y_axis_hist = np.sum(vertical / 255, axis=0)
-    y_axis_hist = [x / max(y_axis_hist) for x in y_axis_hist]
-
-    five_minute_markers = np.array([1 if y >= 0.3 else 0 for y in y_axis_hist])
-    minute = 0
-    temp = five_minute_markers.copy()
-    previous = 0
-    counter = 0
-    for index, current in enumerate(five_minute_markers):
-        if current == 1 and previous == 0:
-            temp[index] = minute
-        elif current == 1 and previous == 1:
-            temp[index] = minute
-        elif current == 0 and previous == 1:
-            minute += 5
-        previous = current
-    temp[0] = 0
-
-    closest_right = 0
-    closest_left = 0
-    counter_right = 0
-    counter_left = 0
-    final_array = temp.copy()
-    for index, i in enumerate(temp):
-        if i != 0:
-            continue
-        while closest_right == 0 and index + counter_right < len(temp):
-            if index + counter > len(temp):
-                break
-            closest_right = temp[index + counter_right]
-            counter_right += 1
-
-        while closest_left == 0 and index - counter_left > 0:
-            if index - counter < 0:
-                break
-            closest_left = temp[index - counter_left]
-            counter_left += 1
-
-        if counter_right < counter_left:
-            final_array[index] = closest_right
-        elif counter_left <= counter_right:
-            final_array[index] = closest_left
-        closest_right = 0
-        closest_left = 0
-        counter_right = 0
-        counter_left = 0
-
-    final_array = [0 if i == 1 else i for i in final_array]
-    return final_array
 
 
 def filter_duplicate_detections(detections):
