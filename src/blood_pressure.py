@@ -13,7 +13,7 @@ BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
 
 
-def extract(image) -> dict:
+def extract_blood_pressure(image) -> dict:
     """Runs methods in order to extract the blood pressure.
 
     Args :
