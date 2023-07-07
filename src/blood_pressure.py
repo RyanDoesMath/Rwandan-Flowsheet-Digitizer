@@ -237,7 +237,7 @@ def find_bp_value_for_bbox(image, preds):
     predicted_bps = []
     bp_matrix = get_bp_matrix(image)
     for _, row in preds.iterrows():
-        cntr = compute_center(row, len(H[0]))
+        cntr = compute_center(row, len(bp_matrix[0]))
         predicted_bps.append(bp_matrix[cntr[0]][cntr[1]])
     return predicted_bps
 
@@ -611,7 +611,7 @@ def filter_duplicate_detections_for_one_bp_type(detections):
 
 def show_detections(image):
     """Draws the bp detections on the image."""
-    extractions = extract(image)
+    extractions = extract_blood_pressure(image)
     img = crop_legend_out(image)
     draw = ImageDraw.Draw(img)
     for _, det in extractions.iterrows():
