@@ -22,7 +22,6 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
-    image = normalize(image)
     image = crop_legend_out(image)
     systolic_pred = BLOOD_PRESSURE_MODEL(image)[0]
     diastolic_pred = (
@@ -140,17 +139,6 @@ def get_twohundred_and_thirty_box(
     thirty_box = thirty_boxes[0]
 
     return two_hundred_box, thirty_box
-
-
-def normalize(image):
-    """Normalizes the image for better prediction."""
-    img = pil_to_cv2(image)
-    img_normalized = cv2.normalize(img, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    readjusted = img_normalized * 255
-    readjusted = readjusted.astype(np.uint8)
-    im_normalized = Image.fromarray(readjusted)
-
-    return im_normalized
 
 
 def bb_intersection(box_a, box_b):
@@ -618,17 +606,3 @@ def show_detections(image):
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
         draw.rectangle(box, outline="red")
     return img
-
-
-def cv2_to_pil(cv2_image):
-    """Converts a cv2 image to a PIL image."""
-    color_converted = cv2.cvtColor(cv2.bitwise_not(cv2_image), cv2.COLOR_BGR2RGB)
-    pil_image = Image.fromarray(color_converted)
-    return pil_image
-
-
-def pil_to_cv2(pil_img):
-    """Converts a PIL image to a cv2 image."""
-    open_cv_image = np.array(pil_img)
-    open_cv_image = open_cv_image[:, :, ::-1].copy()  # Convert RGB to BGR
-    return open_cv_image
