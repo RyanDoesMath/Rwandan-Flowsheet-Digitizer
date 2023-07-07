@@ -24,12 +24,11 @@ def extract_blood_pressure(image) -> dict:
     """
     image = normalize(image)
     image = crop_legend_out(image)
-    systolic_pred = BLOOD_PRESSURE_MODEL(image).pandas().xyxy[0]
+    systolic_pred = BLOOD_PRESSURE_MODEL(image)[0]
     diastolic_pred = (
-        BLOOD_PRESSURE_MODEL(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM))
-        .pandas()
-        .xyxy[0]
+        BLOOD_PRESSURE_MODEL(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM))[0]
     )
+    print(systolic_pred.boxes.data, diastolic_pred.boxes.data)
     systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
         systolic_pred, diastolic_pred, image
     )
@@ -128,7 +127,7 @@ def get_twohundred_and_thirty_box(
     thirty_boxes = list(
         filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
     )
-
+    print(two_hundred_boxes, thirty_boxes)
     if len(two_hundred_boxes) == 0:
         raise ValueError("No detection for 200 on the legend.")
     if len(thirty_boxes) == 0:
