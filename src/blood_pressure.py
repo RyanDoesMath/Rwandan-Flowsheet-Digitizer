@@ -1,12 +1,12 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
+from typing import List, Tuple
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
 import numpy as np
 from ultralytics import YOLO
-from typing import List, Tuple, Dict
 
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
@@ -61,12 +61,86 @@ def combine_predictions(systolic_predictions, diastolic_predictions):
 
 
 def crop_legend_out(image):
-    """Crops out the legend from the bp image."""
-    pred = TWOHUNDRED_THIRTY_MODEL(image).pandas().xyxy[0]
-    two_hundred = pred[pred["name"] == "200"].iloc[0]
-    thirty = pred[pred["name"] == "30"].iloc[0]
-    bbox = (two_hundred.xmax, two_hundred.ymin, image.size[0], thirty.ymax + 3)
-    return image.crop(bbox)
+    """Crops out everything left of the legend.
+
+    Args :
+        image - A PIL image of the BP section.
+
+    Returns : a cropped version of the image with only the BP graph.
+    """
+    width, _ = image.size
+    box_and_class = make_legend_predictions(image)
+
+    two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+    top = two_hundred_box[1]
+    bottom = thirty_box[3]
+    right = max(two_hundred_box[2], thirty_box[2])
+
+    small_offset = 3
+    crop = image.crop((right, top, width, bottom + small_offset))
+    return crop
+
+
+def make_legend_predictions(image) -> List[List[float]]:
+    """Predicts where 200 and 30 are on the image.
+
+    This function first crops out the rightmost four fifths of the image.
+    This allows the YOLOv8 model to predict on relatively larger objects
+    and slightly speeds up prediction.
+
+    Args :
+        image - A PIL image of the BP section.
+
+    Returns : A list of boxes with the prediction data.
+    """
+    width, height = image.size
+    crop = image.crop([0, 0, width // 5, height])
+
+    preds = TWOHUNDRED_THIRTY_MODEL(crop, verbose=False)
+    box_and_class = preds[0].boxes.data.tolist()
+
+    return box_and_class
+
+
+def get_twohundred_and_thirty_box(
+    box_and_class: List[List[float]],
+) -> Tuple[List[float], List[float]]:
+    """From the predictions, returns the twohundred box and thirty box.
+
+    Since there could in theory be erronous predictions, or a missed prediction,
+    this function will attempt to filter the predictions to the highest
+    confidence predictions, and in the case where there is a missing prediction,
+    it will raise an exception.
+
+    Args :
+        box_and_class - A list of box predictions.
+
+    Returns : A tuple containing (two hundred box, thirty box)
+    """
+    two_hundred = 0.0
+    thirty = 1.0
+    index_of_confidence = 4
+    index_of_class = 5
+
+    two_hundred_boxes = list(
+        filter(lambda bnc: bnc[index_of_class] == two_hundred, box_and_class)
+    )
+    thirty_boxes = list(
+        filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
+    )
+
+    if len(two_hundred_boxes) == 0:
+        raise ValueError("No detection for 200 on the legend.")
+    if len(thirty_boxes) == 0:
+        raise ValueError("No detection for 30 on the legend.")
+
+    two_hundred_boxes.sort(key=lambda box: box[index_of_confidence])
+    thirty_boxes.sort(key=lambda box: box[index_of_confidence])
+
+    two_hundred_box = two_hundred_boxes[0]
+    thirty_box = thirty_boxes[0]
+
+    return two_hundred_box, thirty_box
 
 
 def normalize(image):
