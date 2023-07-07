@@ -613,7 +613,7 @@ def filter_duplicate_detections_for_one_bp_type(detections):
 def show_detections(image):
     """Draws the bp detections on the image."""
     extractions = extract(image)
-    img = cropped_im.copy()
+    img = crop_legend_out(image)
     draw = ImageDraw.Draw(img)
     for _, det in extractions.iterrows():
         box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
