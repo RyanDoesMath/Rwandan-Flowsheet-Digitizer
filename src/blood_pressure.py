@@ -1,7 +1,7 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
@@ -24,16 +24,16 @@ def extract_blood_pressure(image) -> dict:
     """
     image = crop_legend_out(image)
     systolic_pred = BLOOD_PRESSURE_MODEL(image)[0]
-    diastolic_pred = (
-        BLOOD_PRESSURE_MODEL(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM))[0]
-    )
+    diastolic_pred = BLOOD_PRESSURE_MODEL(
+        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+    )[0]
     print(systolic_pred.boxes.data, diastolic_pred.boxes.data)
     systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
         systolic_pred, diastolic_pred, image
     )
     bp_pred = combine_predictions(systolic_pred, diastolic_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bbox(image, bp_pred)
+    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
 
@@ -485,6 +485,22 @@ def filter_duplicate_detections_for_one_bp_type(detections):
         for index in temp.index[1:]:
             ix_to_remove.append(index)
     return bps[~(bps.index.isin(ix_to_remove))]
+
+
+def find_timestamp_for_bboxes(
+    bp_bounding_boxes: Tuple[List[int], List[int]]
+) -> Dict[int, Tuple[int, int]]:
+    """Finds the timestamp for all bounding boxes detected.
+
+    This function uses kmeans clustering to find what timestamp is appropriate for each
+    bounding box.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes detected as a tuple (systolics, diastolics)
+
+    Returns : A dictionary with timestamps as keys and a single (systolic, diastolic) pair
+              as a value.
+    """
 
 
 def show_detections(image):
