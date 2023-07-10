@@ -41,6 +41,47 @@ def tile_image(image, rows: int, columns: int, stride: float = 1 / 2) -> List[Li
 
     Returns : A tiled image, where you can find the tile you wish by tiles[row][col].
     """
+    tiles = []
+    width, height = image.size
+    x_coords = get_x_coords(width, columns)
+    y_coords = get_y_coords(height, rows)
+    for index_x in range(len(x_coords[0 : -int(1 / stride)])):
+        row = []
+        for index_y in range(len(y_coords[0 : -int(1 / stride)])):
+            temp = image.crop(
+                (
+                    x_coords[index_x],
+                    y_coords[index_y],
+                    x_coords[index_x + int(1 / stride)],
+                    y_coords[index_y + int(1 / stride)],
+                )
+            )
+            row.append(temp)
+        tiles.append(row)
+    return tiles
+
+
+def get_x_coords(width: float, columns: int):
+    """Gets the x coordinates for where to crop a tile.
+
+    Parameters:
+        width - the width of the image to tile.
+        columns - the number of oclumns that the image is cut into.
+
+    Returns : The x coordinates for all the tiles.
+    """
+    return [int((width * i / columns)) for i in range(0, columns)] + [width]
+
+
+def get_y_coords(height: float, rows: int):
+    """Gets the y coordinates for where to crop a tile.
+
+    Parameters:
+        height - the height of the image to tile.
+        rows - the number of rows that the image will be cut into.
+
+    Returns : The y coordinates for all the tiles."""
+    return [int((height * i / rows)) for i in range(0, rows)] + [height]
 
 
 def predict_on_tiles(model, tiles) -> List[List[float]]:
