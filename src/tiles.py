@@ -8,12 +8,25 @@ from typing import List
 
 
 def tile_predict(
-    model, image, rows: int, columns: int, stride: float = 1 / 2
+    model, image, rows: int, columns: int, stride: float, overlap_tolerance: float
 ) -> List[List[float]]:
-    """Uses a YOLOv8 model to predict on an image using image tiling."""
+    """Uses a YOLOv8 model to predict on an image using image tiling.
+
+    Args :
+        model - the YOLOv8 model to use.
+        image - the PIL image to predict on.
+        rows - the number of rows that the image will be cut into.
+        columns - the number of columns that the image will be cut into.
+        stride - the amount that the window should slide when making cuts.
+        overlap_tolerance - the percentage of combined area that two boxes
+                            can overlap before one is removed.
+
+    Returns : Predictions on the whole image identical in form to what you
+              would get if you just called "model(image)".
+    """
     tiles = tile_image(image, rows, columns, stride)
     tiled_predictions = predict_on_tiles(model, tiles)
-    predictions = reassemble_predictions(tiled_predictions)
+    predictions = reassemble_predictions(tiled_predictions, overlap_tolerance)
     return predictions
 
 
@@ -41,7 +54,9 @@ def predict_on_tiles(model, tiles) -> List[List[float]]:
     """
 
 
-def reassemble_predictions(tiled_predictions: List[List[float]]) -> List[List[float]]:
+def reassemble_predictions(
+    tiled_predictions: List[List[float]], overlap_tolerance: float
+) -> List[List[float]]:
     """Reassembles the tiled predictions into predictions on the full image.
 
     Args :
