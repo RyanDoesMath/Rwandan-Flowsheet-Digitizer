@@ -7,6 +7,8 @@ import cv2
 import pandas as pd
 import numpy as np
 from ultralytics import YOLO
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
@@ -33,7 +35,7 @@ def extract_blood_pressure(image) -> dict:
     )
     bp_pred = combine_predictions(systolic_pred, diastolic_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(image, bp_pred)
+    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
 
@@ -501,6 +503,13 @@ def find_timestamp_for_bboxes(
     Returns : A dictionary with timestamps as keys and a single (systolic, diastolic) pair
               as a value.
     """
+    # get plausible k-means values for k [(num_boxes/2)-10%, (num_boxes/2)+10%]
+    # find silhouette score for all k
+    # select optimal k.
+    # check if every cluster has at most 1 of each type [sbp, dbp].
+    # if so, impute a timestamp as a multiple of 5 by the average x value
+    # if not, select the next highest silhouette score and try it.
+    # if all fails, raise an exception (need to write a backup method.)
 
 
 def show_detections(image):
