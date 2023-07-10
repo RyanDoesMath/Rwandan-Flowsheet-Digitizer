@@ -93,6 +93,13 @@ def predict_on_tiles(model, tiles) -> List[List[float]]:
 
     Returns : The model's predictions on each tile.
     """
+    predictions = []
+    for row in tiles:
+        new_preds = []
+        for tile in row:
+            new_preds.append(model(tile, verbose=False)[0].boxes.data)
+        predictions.append(new_preds)
+    return predictions
 
 
 def reassemble_predictions(
