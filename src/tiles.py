@@ -24,3 +24,14 @@ def tile_image(image, rows: int, columns: int, stride: float = 1 / 2) -> List[Li
 
     Returns : A tiled image, where you can find the tile you wish by tiles[row][col].
     """
+
+
+def reassemble_predictions(predictions: List[List[float]]) -> List[List[float]]:
+    """Reassembles the tiled predictions into predictions on the full image.
+
+    Args :
+        predictions - the tiled predictions.
+
+    Returns : Predictions whose xy coords are on the full image, and has overlapping
+              predictions removed.
+    """
