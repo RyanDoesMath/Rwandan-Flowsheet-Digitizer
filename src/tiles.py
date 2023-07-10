@@ -8,7 +8,13 @@ from typing import List
 
 
 def tile_predict(
-    model, image, rows: int, columns: int, stride: float, overlap_tolerance: float
+    model,
+    image,
+    rows: int,
+    columns: int,
+    stride: float,
+    overlap_tolerance: float,
+    remove_non_square: bool = False,
 ) -> List[List[float]]:
     """Uses a YOLOv8 model to predict on an image using image tiling.
 
@@ -20,13 +26,23 @@ def tile_predict(
         stride - the amount that the window should slide when making cuts.
         overlap_tolerance - the percentage of combined area that two boxes
                             can overlap before one is removed.
+        remove_non_square - Whether or not to remove non-square predictions.
 
     Returns : Predictions on the whole image identical in form to what you
               would get if you just called "model(image)".
     """
     tiles = tile_image(image, rows, columns, stride)
     tiled_predictions = predict_on_tiles(model, tiles)
-    predictions = reassemble_predictions(tiled_predictions, overlap_tolerance)
+    width, height = image.size
+    predictions = reassemble_predictions(
+        tiled_predictions,
+        overlap_tolerance,
+        remove_non_square,
+        rows,
+        columns,
+        width,
+        height,
+    )
     return predictions
 
 
@@ -103,13 +119,71 @@ def predict_on_tiles(model, tiles) -> List[List[float]]:
 
 
 def reassemble_predictions(
-    tiled_predictions: List[List[float]], overlap_tolerance: float
+    tiled_predictions: List[List[float]],
+    overlap_tolerance: float,
+    remove_non_square: bool,
+    rows: int,
+    columns: int,
+    width: int,
+    height: int,
 ) -> List[List[float]]:
     """Reassembles the tiled predictions into predictions on the full image.
 
     Args :
         tiled_predictions - the tiled predictions.
+        overlap_tolerance - the percentage of combined area that two boxes
+                            can overlap before one is removed.
+        remove_non_square - whether or not to remove non-square predictions.
+        rows - the number of rows that the image will be cut into.
+        columns - the number of columns that the image will be cut into.
+        width - the width of the image in pixels.
+        height - the height of the image in pixels.
 
     Returns : Predictions whose xy coords are on the full image, and has overlapping
               predictions removed.
     """
+    predictions = map_raw_detections_to_full_image(
+        tiled_predictions, rows, columns, width, height
+    )
+    if remove_non_square:
+        predictions = remove_non_square_detections(predictions)
+    predictions = remove_overlapping_detections(predictions, overlap_tolerance)
+    return predictions
+
+
+def map_raw_detections_to_full_image(
+    predictions, rows: int, columns: int, width: int, height: int
+):
+    """Maps the coordinates of the raw detections to where they are on the full image.
+
+    Args :
+        predictions - the
+        rows - the number of rows that the image will be cut into.
+        columns - the number of columns that the image will be cut into.
+        width - the width of the image in pixels.
+        height - the height of the image in pixels.
+    """
+
+    def x_at_col(col):
+        return int(width * (col / (columns + 1)))
+
+    def y_at_row(row):
+        return int(height * (row / (rows + 1)))
+
+    mapped_boxes = []
+
+    for col_ix, col in enumerate(predictions):
+        for row_ix, row in enumerate(col):
+            boxes = row[0].boxes.data.tolist()
+            for box in boxes:
+                mapped_boxes.append(
+                    [
+                        box[0] + x_at_col(col_ix),
+                        box[1] + y_at_row(row_ix),
+                        box[2] + x_at_col(col_ix),
+                        box[3] + y_at_row(row_ix),
+                        box[4],
+                        box[5],
+                    ]
+                )
+    return mapped_boxes
