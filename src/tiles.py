@@ -214,7 +214,7 @@ def remove_overlapping_detections(
     rects = sorted(predictions, key=lambda x: x[4], reverse=True)  # sort by confidence.
     for this_ix, this_rect in enumerate(rects):
         for that_ix, that_rect in enumerate(rects[this_ix + 1 :]):
-            if intersection_over_union(this_rect, that_rect) > 0.5:
+            if intersection_over_union(this_rect, that_rect) > overlap_tolerance:
                 index_to_remove = (
                     this_ix if this_rect[4] < that_rect[4] else this_ix + that_ix + 1
                 )
@@ -222,3 +222,20 @@ def remove_overlapping_detections(
 
     for index in sorted(list(set(remove)), reverse=True):
         del rects[index]
+
+
+def intersection_over_union(
+    box_1: List[List[float]], box_2: List[List[float]]
+) -> float:
+    """Computes box intersection over union."""
+    width = max((box_1[0], box_2[0])) - min((box_1[2], box_2[2]))
+    height = max((box_1[1], box_2[1])) - min((box_1[3], box_2[3]))
+    intersection_area = width * height
+    if width > 0 and height > 0:
+        return intersection_area / (area(box_1) + area(box_2) - intersection_area)
+    return 0
+
+
+def area(box: List[float]) -> float:
+    """Computes the area of a box."""
+    return (box[2] - box[0]) * (box[3] - box[1])
