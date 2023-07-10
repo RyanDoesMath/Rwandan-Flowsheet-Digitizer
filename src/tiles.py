@@ -190,7 +190,7 @@ def map_raw_detections_to_full_image(
 
 
 def remove_non_square_detections(predictions: List[List[float]]) -> List[List[float]]:
-    """Removes detections with aren't square enough.
+    """Removes detections that aren't square enough.
 
     Args :
         predictions - The bounding box predictions.
@@ -210,3 +210,15 @@ def remove_overlapping_detections(
 
     Returns : A list of predictions where the remaining boxes do not overlap significantly.
     """
+    remove = []
+    rects = sorted(predictions, key=lambda x: x[4], reverse=True)  # sort by confidence.
+    for this_ix, this_rect in enumerate(rects):
+        for that_ix, that_rect in enumerate(rects[this_ix + 1 :]):
+            if intersection_over_union(this_rect, that_rect) > 0.5:
+                index_to_remove = (
+                    this_ix if this_rect[4] < that_rect[4] else this_ix + that_ix + 1
+                )
+                remove.append(index_to_remove)
+
+    for index in sorted(list(set(remove)), reverse=True):
+        del rects[index]
