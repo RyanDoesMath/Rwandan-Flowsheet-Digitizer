@@ -42,6 +42,7 @@ def tile_predict(
         columns,
         width,
         height,
+        stride,
     )
     return predictions
 
@@ -83,7 +84,6 @@ def get_x_coords(width: float, columns: int, stride: float):
     Parameters:
         width - the width of the image to tile.
         columns - the number of oclumns that the image is cut into.
-        stride - the amount that the window should slide when making cuts.
 
     Returns : The x coordinates for all the tiles.
     """
@@ -100,7 +100,6 @@ def get_y_coords(height: float, rows: int, stride: float):
     Parameters:
         height - the height of the image to tile.
         rows - the number of rows that the image will be cut into.
-        stride - the amount that the window should slide when making cuts.
 
     Returns : The y coordinates for all the tiles."""
     new_number_of_rows = rows * int(1 / stride)
@@ -135,6 +134,7 @@ def reassemble_predictions(
     columns: int,
     width: int,
     height: int,
+    stride: float,
 ) -> List[List[float]]:
     """Reassembles the tiled predictions into predictions on the full image.
 
@@ -152,7 +152,7 @@ def reassemble_predictions(
               predictions removed.
     """
     predictions = map_raw_detections_to_full_image(
-        tiled_predictions, rows, columns, width, height
+        tiled_predictions, rows, columns, width, height, stride
     )
     if remove_non_square:
         predictions = remove_non_square_detections(predictions)
@@ -161,7 +161,7 @@ def reassemble_predictions(
 
 
 def map_raw_detections_to_full_image(
-    predictions, rows: int, columns: int, width: int, height: int
+    predictions, rows: int, columns: int, width: int, height: int, stride: float
 ):
     """Maps the coordinates of the raw detections to where they are on the full image.
 
@@ -173,11 +173,8 @@ def map_raw_detections_to_full_image(
         height - the height of the image in pixels.
     """
 
-    def x_at_col(col):
-        return int(width * (col / (columns + 1)))
-
-    def y_at_row(row):
-        return int(height * (row / (rows + 1)))
+    x_coords = get_x_coords(width, columns, stride)
+    y_coords = get_y_coords(height, rows, stride)
 
     mapped_boxes = []
 
@@ -187,10 +184,10 @@ def map_raw_detections_to_full_image(
             for box in boxes:
                 mapped_boxes.append(
                     [
-                        box[0] + x_at_col(col_ix),
-                        box[1] + y_at_row(row_ix),
-                        box[2] + x_at_col(col_ix),
-                        box[3] + y_at_row(row_ix),
+                        box[0] + x_coords[col_ix],
+                        box[1] + y_coords[row_ix],
+                        box[2] + x_coords[col_ix],
+                        box[3] + y_coords[row_ix],
                         box[4],
                         box[5],
                     ]
@@ -243,24 +240,29 @@ def remove_overlapping_detections(
                     this_ix if this_rect[4] < that_rect[4] else this_ix + that_ix + 1
                 )
                 remove.append(index_to_remove)
-
     for index in sorted(list(set(remove)), reverse=True):
         del rects[index]
-
     return rects
 
 
-def intersection_over_union(
-    box_1: List[List[float]], box_2: List[List[float]]
-) -> float:
-    """Computes box intersection over union."""
-    width = max((box_1[0], box_2[0])) - min((box_1[2], box_2[2]))
-    height = max((box_1[1], box_2[1])) - min((box_1[3], box_2[3]))
-    intersection_area = width * height
-    boxes_overlap = width > 0 and height > 0
-    if boxes_overlap:
-        return intersection_area / (area(box_1) + area(box_2) - intersection_area)
-    return 0
+def intersection_over_union(box_a: List[float], box_b: List[float]):
+    """Computes the bounding box intersection over union.
+
+    Parameters:
+        box_a - the first box (order doesn't matter.)
+        box_b - the second box (order doesn't matter.)
+
+    Returns : the intersection over union for the two bounding boxes.
+    """
+    left_side = max(box_a[0], box_b[0])
+    top_side = max(box_a[1], box_b[1])
+    right_side = min(box_a[2], box_b[2])
+    bottom_side = min(box_a[3], box_b[3])
+    if left_side > right_side or top_side > bottom_side:
+        return 0
+    intersection_area = area([left_side, top_side, right_side, bottom_side])
+    iou = intersection_area / float(area(box_b) + area(box_b) - intersection_area)
+    return iou
 
 
 def area(box: List[float]) -> float:
