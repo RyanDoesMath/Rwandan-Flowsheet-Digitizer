@@ -5,6 +5,7 @@ predictions, allowing other code which uses tiles to not
 worry about the implementation of image tiling."""
 
 from typing import List
+from PIL import ImageDraw
 
 
 def tile_predict(
@@ -268,3 +269,29 @@ def intersection_over_union(box_a: List[float], box_b: List[float]):
 def area(box: List[float]) -> float:
     """Computes the area of a box."""
     return (box[2] - box[0]) * (box[3] - box[1])
+
+
+def show_detections(
+    model,
+    image,
+    rows: int,
+    columns: int,
+    stride: float,
+    overlap_tolerance: float,
+    remove_non_square: bool = False,
+):
+    """Draws the detections on a PIL image and returns it."""
+    preds = tile_predict(
+        model,
+        image,
+        rows=rows,
+        columns=columns,
+        stride=stride,
+        overlap_tolerance=overlap_tolerance,
+        remove_non_square=remove_non_square,
+    )
+    img = image.copy()
+    draw = ImageDraw.Draw(img)
+    for box in preds:
+        draw.rectangle(box[:4])
+    return img
