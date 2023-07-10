@@ -59,8 +59,8 @@ def tile_image(image, rows: int, columns: int, stride: float = 1 / 2) -> List[Li
     """
     tiles = []
     width, height = image.size
-    x_coords = get_x_coords(width, columns)
-    y_coords = get_y_coords(height, rows)
+    x_coords = get_x_coords(width, columns, stride)
+    y_coords = get_y_coords(height, rows, stride)
     for index_x in range(len(x_coords[0 : -int(1 / stride)])):
         row = []
         for index_y in range(len(y_coords[0 : -int(1 / stride)])):
@@ -77,27 +77,36 @@ def tile_image(image, rows: int, columns: int, stride: float = 1 / 2) -> List[Li
     return tiles
 
 
-def get_x_coords(width: float, columns: int):
+def get_x_coords(width: float, columns: int, stride: float):
     """Gets the x coordinates for where to crop a tile.
 
     Parameters:
         width - the width of the image to tile.
         columns - the number of oclumns that the image is cut into.
+        stride - the amount that the window should slide when making cuts.
 
     Returns : The x coordinates for all the tiles.
     """
-    return [int((width * i / columns)) for i in range(0, columns)] + [width]
+    new_number_of_columns = columns * int(1 / stride)
+    return [
+        int((width * i / new_number_of_columns))
+        for i in range(0, new_number_of_columns)
+    ] + [width]
 
 
-def get_y_coords(height: float, rows: int):
+def get_y_coords(height: float, rows: int, stride: float):
     """Gets the y coordinates for where to crop a tile.
 
     Parameters:
         height - the height of the image to tile.
         rows - the number of rows that the image will be cut into.
+        stride - the amount that the window should slide when making cuts.
 
     Returns : The y coordinates for all the tiles."""
-    return [int((height * i / rows)) for i in range(0, rows)] + [height]
+    new_number_of_rows = rows * int(1 / stride)
+    return [
+        int((height * i / new_number_of_rows)) for i in range(0, new_number_of_rows)
+    ] + [height]
 
 
 def predict_on_tiles(model, tiles) -> List[List[float]]:
@@ -113,7 +122,7 @@ def predict_on_tiles(model, tiles) -> List[List[float]]:
     for row in tiles:
         new_preds = []
         for tile in row:
-            new_preds.append(model(tile, verbose=False)[0].boxes.data)
+            new_preds.append(model(tile, verbose=False)[0].boxes.data.tolist())
         predictions.append(new_preds)
     return predictions
 
@@ -174,7 +183,7 @@ def map_raw_detections_to_full_image(
 
     for col_ix, col in enumerate(predictions):
         for row_ix, row in enumerate(col):
-            boxes = row[0].boxes.data.tolist()
+            boxes = row.copy()
             for box in boxes:
                 mapped_boxes.append(
                     [
