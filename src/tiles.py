@@ -189,14 +189,29 @@ def map_raw_detections_to_full_image(
     return mapped_boxes
 
 
-def remove_non_square_detections(predictions: List[List[float]]) -> List[List[float]]:
+def remove_non_square_detections(
+    predictions: List[List[float]], threshold: float = 0.25
+) -> List[List[float]]:
     """Removes detections that aren't square enough.
 
     Args :
         predictions - The bounding box predictions.
+        threshold - a float to determine how non-square a detection must
+                    be to be removed.
 
     Returns : A list of predictions with non-square detections removed.
     """
+    remove = []
+    for index, box in enumerate(predictions):
+        left, right = min(box[0], box[2]), max(box[0], box[2])
+        top, bottom = min(box[1], box[3]), max(box[1], box[3])
+        width = left - right
+        height = top - bottom
+        if abs((width - height) / ((height + width) / 2)) > threshold:
+            remove.append(index)
+    for index in sorted(remove, reverse=True):
+        predictions.pop(index)
+    return predictions
 
 
 def remove_overlapping_detections(
@@ -223,6 +238,8 @@ def remove_overlapping_detections(
     for index in sorted(list(set(remove)), reverse=True):
         del rects[index]
 
+    return rects
+
 
 def intersection_over_union(
     box_1: List[List[float]], box_2: List[List[float]]
@@ -231,7 +248,8 @@ def intersection_over_union(
     width = max((box_1[0], box_2[0])) - min((box_1[2], box_2[2]))
     height = max((box_1[1], box_2[1])) - min((box_1[3], box_2[3]))
     intersection_area = width * height
-    if width > 0 and height > 0:
+    boxes_overlap = width > 0 and height > 0
+    if boxes_overlap:
         return intersection_area / (area(box_1) + area(box_2) - intersection_area)
     return 0
 
