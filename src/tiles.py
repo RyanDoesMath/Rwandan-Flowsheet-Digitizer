@@ -187,3 +187,26 @@ def map_raw_detections_to_full_image(
                     ]
                 )
     return mapped_boxes
+
+
+def remove_non_square_detections(predictions: List[List[float]]) -> List[List[float]]:
+    """Removes detections with aren't square enough.
+
+    Args :
+        predictions - The bounding box predictions.
+
+    Returns : A list of predictions with non-square detections removed.
+    """
+
+
+def remove_overlapping_detections(
+    predictions: List[List[float]], overlap_tolerance: float
+) -> List[List[float]]:
+    """Removes detections that overlap too much.
+
+    Args :
+        predictions - The bounding box predictions.
+        overlap_tolerance - The IOU over which two boxes are said to be matching.
+
+    Returns : A list of predictions where the remaining boxes do not overlap significantly.
+    """
