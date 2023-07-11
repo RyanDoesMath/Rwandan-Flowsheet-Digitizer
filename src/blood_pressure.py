@@ -9,6 +9,7 @@ import numpy as np
 from ultralytics import YOLO
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+import tiles
 
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
@@ -25,11 +26,23 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     image = crop_legend_out(image)
-    systolic_pred = BLOOD_PRESSURE_MODEL(image)[0]
-    diastolic_pred = BLOOD_PRESSURE_MODEL(
-        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
-    )[0]
-    print(systolic_pred.boxes.data, diastolic_pred.boxes.data)
+    systolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image,
+        rows=4,
+        columns=10,
+        stride=1 / 2,
+        overlap_tolerance=0.5,
+    )
+    diastolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        rows=4,
+        columns=10,
+        stride=1 / 2,
+        overlap_tolerance=0.5,
+    )
+    print(systolic_pred, diastolic_pred)
     systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
         systolic_pred, diastolic_pred, image
     )
