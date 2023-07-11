@@ -22,11 +22,13 @@ class BloodPressure:
     """Data class that is a struct for blood pressure.
 
     Attributes :
+        box - The bounding box for the detections
         systolic - The systolic blood pressure.
         diastolic - The diastolic blood pressure.
         timestamp - The timestamp.
     """
 
+    box: List[Tuple[float]]
     systolic: int
     diastolic: int
     timestamp: int
@@ -464,11 +466,17 @@ def find_timestamp_for_bboxes(
     x distances.
 
     Args :
-        bp_bounding_boxes - the bounding boxes detected as a tuple (systolics, diastolics)
+        bp_bounding_boxes - the bounding boxes detected as a tuple (sys, dia)
 
-    Returns : A dictionary with timestamps as keys and a single (systolic, diastolic) pair
-              as a value.
+    Returns : A list with BloodPressures sorted by timestamp.
     """
+    dists = get_x_dists_matrix(bp_bounding_boxes)
+
+
+def get_x_dists_matrix(bp_bounding_boxes):
+    """Returns a matrix where each row corresponds to a systolic blood pressure,
+    each column corresponds to a diastolic blood pressure, and the entries are
+    the x distances between the center of the two bounding boxes."""
 
 
 def show_detections(image):
