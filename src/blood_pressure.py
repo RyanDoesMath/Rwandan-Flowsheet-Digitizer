@@ -482,7 +482,7 @@ def find_timestamp_for_bboxes(
     """
     dists = generate_x_dists_matrix(bp_bounding_boxes)
     dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
-    matches = generate_matches(dists)
+    matches = generate_matches(dists, bp_bounding_boxes)
     timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
     return timestamped_blood_pressures
 
@@ -524,13 +524,6 @@ def filter_non_matches(
               non-matches as BloodPressure structs.
     """
 
-    def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
-        return list(map(list, zip(*dists)))
-
-    def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
-        list_with_largest_minimum = sorted(dists, key=min)[-1]
-        return dists.index(list_with_largest_minimum)
-
     # check if rows > columns. if so transpose, and make sure to detranspose
     # by the end.
     dists_was_tranposed = False
@@ -561,6 +554,17 @@ def filter_non_matches(
     return dists, non_matches
 
 
+def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
+    """Transposes the dists matrix."""
+    return list(map(list, zip(*dists)))
+
+
+def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the largest minimum value."""
+    list_with_largest_minimum = sorted(dists, key=min)[-1]
+    return dists.index(list_with_largest_minimum)
+
+
 def generate_matches(
     dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
 ) -> List[BloodPressure]:
@@ -574,13 +578,6 @@ def generate_matches(
 
     Returns : A list of BloodPressure structs.
     """
-
-    def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
-        list_with_smallest_minimum = sorted(dists, key=min)[0]
-        return dists.index(list_with_smallest_minimum)
-
-    def get_index_of_smallest_val(row: List[float]) -> int:
-        return row.index(min(row))
 
     matches = []
     while len(dists) > 0:
@@ -603,6 +600,17 @@ def generate_matches(
             del row[smallest_dia]
         del dists[smallest_sys]
     return matches
+
+
+def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the smallest minimum value."""
+    list_with_smallest_minimum = sorted(dists, key=min)[0]
+    return dists.index(list_with_smallest_minimum)
+
+
+def get_index_of_smallest_val(row: List[float]) -> int:
+    """Gets the index of the smallest value in a list."""
+    return row.index(min(row))
 
 
 def timestamp_blood_pressures(
