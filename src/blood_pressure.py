@@ -32,7 +32,7 @@ def extract_blood_pressure(image) -> dict:
         rows=4,
         columns=10,
         stride=1 / 2,
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.1,
     )
     diastolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
@@ -40,37 +40,14 @@ def extract_blood_pressure(image) -> dict:
         rows=4,
         columns=10,
         stride=1 / 2,
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.1,
     )
     print(systolic_pred, diastolic_pred)
-    systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
-        systolic_pred, diastolic_pred, image
-    )
-    bp_pred = combine_predictions(systolic_pred, diastolic_pred)
+    diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
-
-
-def filter_and_adjust_bp_predictions(
-    systolic_predictions, diastolic_predictions, image
-):
-    """Filters the blood pressure predictions and unflips the diastolic predictions."""
-    systolic_predictions = filter_bp_predictions(systolic_predictions)
-    diastolic_predictions = filter_bp_predictions(diastolic_predictions)
-    diastolic_predictions = adjust_diastolic_preds(diastolic_predictions, image.size[1])
-    return systolic_predictions, diastolic_predictions
-
-
-def combine_predictions(systolic_predictions, diastolic_predictions):
-    """Combines the predictions together into one dataframe."""
-    systolic_predictions["name"] = "systolic"
-    diastolic_predictions["name"] = "diastolic"
-    bp_predictions = pd.concat([systolic_predictions, diastolic_predictions])
-    bp_predictions = bp_predictions.reset_index(drop=True)
-    bp_predictions = bp_predictions.drop(["flagged_for_removal", "class"], axis=1)
-    return bp_predictions
 
 
 def crop_legend_out(image):
@@ -177,46 +154,6 @@ def bb_intersection(box_a, box_b):
     # compute the area of intersection rectangle
     area_of_intersection = (right - left) * (top - bottom)
     return area_of_intersection
-
-
-def box_area(box):
-    """Computes the area of a box."""
-    return (box[2] - box[0]) * (box[3] - box[1])
-
-
-def filter_bp_predictions(preds):
-    """Filters overlapping bounding boxes out of the predictions.
-
-    Parameters:
-        preds - the pandas prediction dataframe from the yolo model.
-    Returns: A pandas dataframe with less or no erroneous predictions.
-    """
-    threshold = 0.5
-    temp = preds.copy()
-    temp["flagged_for_removal"] = False
-
-    def get_box(row):
-        return (row.xmin, row.ymin, row.xmax, row.ymax)
-
-    for _, this_row in preds.iterrows():
-        this_box = get_box(this_row)
-        for that_ix, that_row in preds.iterrows():
-            that_box = get_box(that_row)
-            percent_overlap = bb_intersection(this_box, that_box) / box_area(this_box)
-            if percent_overlap > threshold and percent_overlap != 1:
-                temp.at[that_ix, "flagged_for_removal"] = True
-
-    detections_filtered = remove_filtered_detections(temp)
-
-    return detections_filtered
-
-
-def remove_filtered_detections(detections_flagged):
-    """Removes the filtered detections from the dataframe."""
-    mask = ~detections_flagged["flagged_for_removal"]
-    detections_filtered = detections_flagged[mask].copy()
-    detections_filtered.reset_index(drop=True, inplace=True)
-    return detections_filtered
 
 
 def adjust_diastolic_preds(preds, image_height):
