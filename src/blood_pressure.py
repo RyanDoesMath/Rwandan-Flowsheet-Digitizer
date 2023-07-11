@@ -618,6 +618,15 @@ def timestamp_blood_pressures(
     Returns : the blood pressure structs with timestamps.
     """
 
+    def average_x_coord(blood_pressure: BloodPressure) -> float:
+        sys_x_center = blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
+        dia_x_center = blood_pressure.boxes[1][2] - blood_pressure.boxes[1][0]
+        return (sys_x_center + dia_x_center) / 2
+
+    stamped_bps = sorted(average_x_coord, blood_pressures)
+    stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
+    return stamped_bps
+
 
 def show_detections(image):
     """Draws the bp detections on the image."""
