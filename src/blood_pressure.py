@@ -2,6 +2,7 @@
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
 from typing import List, Tuple, Dict
+from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
@@ -14,6 +15,21 @@ import tiles
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
+
+
+@dataclass
+class BloodPressure:
+    """Data class that is a struct for blood pressure.
+
+    Attributes :
+        systolic - The systolic blood pressure.
+        diastolic - The diastolic blood pressure.
+        timestamp - The timestamp.
+    """
+
+    systolic: int
+    diastolic: int
+    timestamp: int
 
 
 def extract_blood_pressure(image) -> dict:
