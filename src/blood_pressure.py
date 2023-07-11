@@ -482,14 +482,16 @@ def find_timestamp_for_bboxes(
 
     Returns : A list with BloodPressures sorted by timestamp.
     """
-    dists = get_x_dists_matrix(bp_bounding_boxes)
+    dists = generate_x_dists_matrix(bp_bounding_boxes)
     dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
     matches = generate_matches(dists)
     timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
     return matches + non_matches
 
 
-def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[float]]:
+def generate_x_dists_matrix(
+    bp_bounding_boxes: Dict[str, List[float]]
+) -> List[List[float]]:
     """Returns a matrix where each row corresponds to a systolic blood pressure,
     each column corresponds to a diastolic blood pressure, and the entries are
     the x distances between the center of the two bounding boxes.
@@ -499,6 +501,15 @@ def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[f
 
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
     """
+    dists = []
+    systolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["systolic"]]
+    diastolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["diastolic"]]
+    for sys_center in systolic_centers:
+        sys_row = []
+        for dia_center in diastolic_centers:
+            sys_row.append(abs(sys_center - dia_center))
+        dists.append(sys_row)
+    return dists
 
 
 def filter_non_matches(
