@@ -90,15 +90,14 @@ class TestTimestampImputation(unittest.TestCase):
             "diastolic": [[0, 0, 1, 1], [1, 1, 2, 2]],
         }
         self.assertEqual(
-            blood_pressure.generate_x_dists_matrix(fn_input), [[0, 0], [0, 0]]
+            blood_pressure.generate_x_dists_matrix(fn_input), [[0, 1], [1, 0]]
         )
         fn_input = {
             "systolic": [[0, 0, 1, 1], [1, 1, 2, 2]],
             "diastolic": [[1, 1, 2, 2], [2, 2, 3, 3]],
         }
-        print(blood_pressure.generate_x_dists_matrix(fn_input))
         self.assertEqual(
-            blood_pressure.generate_x_dists_matrix(fn_input), [[1, 1], [1, 1]]
+            blood_pressure.generate_x_dists_matrix(fn_input), [[1, 2], [0, 1]]
         )
 
 

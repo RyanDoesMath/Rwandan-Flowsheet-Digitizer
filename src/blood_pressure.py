@@ -499,8 +499,12 @@ def generate_x_dists_matrix(
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
     """
     dists = []
-    systolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["systolic"]]
-    diastolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["diastolic"]]
+    systolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["systolic"]
+    ]
+    diastolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["diastolic"]
+    ]
     for sys_center in systolic_centers:
         sys_row = []
         for dia_center in diastolic_centers:
