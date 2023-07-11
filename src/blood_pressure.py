@@ -60,8 +60,9 @@ def extract_blood_pressure(image) -> dict:
     )
     print(systolic_pred, diastolic_pred)
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
-    bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
+    bp_pred = (systolic_pred, diastolic_pred)
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
+    bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
 
@@ -457,7 +458,7 @@ def filter_duplicate_detections_for_one_bp_type(detections):
 
 def find_timestamp_for_bboxes(
     bp_bounding_boxes: Tuple[List[int], List[int]]
-) -> Dict[int, Tuple[int, int]]:
+) -> List[BloodPressure]:
     """Finds the timestamp for all bounding boxes detected.
 
     This function uses kmeans clustering to find what timestamp is appropriate for each
