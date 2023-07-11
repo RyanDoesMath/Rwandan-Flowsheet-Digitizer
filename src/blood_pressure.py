@@ -33,6 +33,18 @@ class BloodPressure:
     diastolic: int
     timestamp: int
 
+    def set_systolic(self, value: int):
+        """Sets the systolic blood pressure."""
+        self.systolic = value
+
+    def set_diastolic(self, value: int):
+        """Sets the diastolic blood pressure."""
+        self.diastolic = value
+
+    def set_timestamp(self, value: int):
+        """Sets the timestamp."""
+        self.timestamp = value
+
 
 def extract_blood_pressure(image) -> dict:
     """Runs methods in order to extract the blood pressure.
@@ -471,7 +483,10 @@ def find_timestamp_for_bboxes(
     Returns : A list with BloodPressures sorted by timestamp.
     """
     dists = get_x_dists_matrix(bp_bounding_boxes)
-    matches, non_matches = filter_non_matches(bp_bounding_boxes, dists)
+    dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
+    matches = generate_matches(dists)
+    timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
+    return matches + non_matches
 
 
 def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[float]]:
@@ -487,17 +502,41 @@ def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[f
 
 
 def filter_non_matches(
-    bp_bounding_boxes: Dict[str, List[float]], dists: List[List[float]]
-) -> Tuple(Dict[str, List[float]], Dict[str, List[float]]):
-    """Removes bp detections which don't have a pair until there is an equal amount
-    of systolic and diastolic predictions.
+    dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
+) -> Tuple[List[List[float]], List[BloodPressure]]:
+    """
 
     Args :
         bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
-        dists - the matrix of distances between the systolic and diastolic boxes.
+        dists - the matrix of distances where the rows correspond to systolic
+                boxes and the columns correspond to diastolic boxes.
 
-    Returns : The predictions separated into two different dictionaries as
-              a tuple (matches, non-matches)
+    Returns : a tuple with the distances matrix sans the non-matches and the
+              non-matches as BloodPressure structs.
+    """
+
+
+def generate_matches(dists: List[List[float]]) -> List[BloodPressure]:
+    """Generates a list of matched blood pressures.
+
+    Args :
+        dists - the matrix of distances where the rows correspond to systolic
+                boxes and the columns correspond to diastolic boxes. This matrix
+                has already had non-matches removed so it is square.
+
+    Returns : A list of BloodPressure structs.
+    """
+
+
+def timestamp_blood_pressures(
+    blood_pressures: List[BloodPressure],
+) -> List[BloodPressure]:
+    """Applies a timestamp to all the blood pressure structs.
+
+    Args :
+        blood_pressures - the blood pressure structs without timestamps.
+
+    Returns : the blodd pressure structs with timestamps.
     """
 
 
