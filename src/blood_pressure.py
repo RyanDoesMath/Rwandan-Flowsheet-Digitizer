@@ -1,8 +1,9 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from dataclasses import dataclass
+from math import ceil
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
@@ -48,7 +49,7 @@ def extract_blood_pressure(image) -> dict:
         rows=4,
         columns=10,
         stride=1 / 2,
-        overlap_tolerance=0.1,
+        overlap_tolerance=0.5,
     )
     diastolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
@@ -56,7 +57,7 @@ def extract_blood_pressure(image) -> dict:
         rows=4,
         columns=10,
         stride=1 / 2,
-        overlap_tolerance=0.1,
+        overlap_tolerance=0.5,
     )
     print(systolic_pred, diastolic_pred)
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
@@ -135,7 +136,6 @@ def get_twohundred_and_thirty_box(
     thirty_boxes = list(
         filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
     )
-    print(two_hundred_boxes, thirty_boxes)
     if len(two_hundred_boxes) == 0:
         raise ValueError("No detection for 200 on the legend.")
     if len(thirty_boxes) == 0:
@@ -470,7 +470,10 @@ def find_timestamp_for_bboxes(
     Returns : A dictionary with timestamps as keys and a single (systolic, diastolic) pair
               as a value.
     """
-    # get plausible k-means values for k [(num_boxes/2)-10%, (num_boxes/2)+10%]
+    # get plausible k-means values for k [(num_boxes/2), (num_boxes/2)+10%]
+    num_boxes = len(bp_bounding_boxes[0])
+    lowest_plausible_k = ceil(num_boxes / 2)
+    highest_plausible_k = lowest_plausible_k + ceil(0.1 * lowest_plausible_k)
     # find silhouette score for all k
     # select optimal k.
     # check if every cluster has at most 1 of each type [sbp, dbp].
