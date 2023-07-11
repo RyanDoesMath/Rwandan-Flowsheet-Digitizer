@@ -3,7 +3,6 @@ pressure section of the Rwandan flowsheet using YOLOv8."""
 
 from typing import List, Tuple
 from dataclasses import dataclass
-from math import ceil
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
@@ -461,8 +460,8 @@ def find_timestamp_for_bboxes(
 ) -> List[BloodPressure]:
     """Finds the timestamp for all bounding boxes detected.
 
-    This function uses kmeans clustering to find what timestamp is appropriate for each
-    bounding box.
+    This function goes through a series of steps to impute a timestamp based on
+    x distances.
 
     Args :
         bp_bounding_boxes - the bounding boxes detected as a tuple (systolics, diastolics)
@@ -470,16 +469,6 @@ def find_timestamp_for_bboxes(
     Returns : A dictionary with timestamps as keys and a single (systolic, diastolic) pair
               as a value.
     """
-    # get plausible k-means values for k [(num_boxes/2), (num_boxes/2)+10%]
-    num_boxes = len(bp_bounding_boxes[0])
-    lowest_plausible_k = ceil(num_boxes / 2)
-    highest_plausible_k = lowest_plausible_k + ceil(0.1 * lowest_plausible_k)
-    # find silhouette score for all k
-    # select optimal k.
-    # check if every cluster has at most 1 of each type [sbp, dbp].
-    # if so, impute a timestamp as a multiple of 5 by the average x value
-    # if not, select the next highest silhouette score and try it.
-    # if all fails, raise an exception (need to write a backup method.)
 
 
 def show_detections(image):
