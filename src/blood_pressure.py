@@ -1,7 +1,7 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
@@ -62,7 +62,7 @@ def extract_blood_pressure(image) -> dict:
     )
     print(systolic_pred, diastolic_pred)
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
-    bp_pred = (systolic_pred, diastolic_pred)
+    bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
@@ -458,7 +458,7 @@ def filter_duplicate_detections_for_one_bp_type(detections):
 
 
 def find_timestamp_for_bboxes(
-    bp_bounding_boxes: Tuple[List[int], List[int]]
+    bp_bounding_boxes: Dict[str, List[float]]
 ) -> List[BloodPressure]:
     """Finds the timestamp for all bounding boxes detected.
 
@@ -473,10 +473,16 @@ def find_timestamp_for_bboxes(
     dists = get_x_dists_matrix(bp_bounding_boxes)
 
 
-def get_x_dists_matrix(bp_bounding_boxes):
+def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[float]]:
     """Returns a matrix where each row corresponds to a systolic blood pressure,
     each column corresponds to a diastolic blood pressure, and the entries are
-    the x distances between the center of the two bounding boxes."""
+    the x distances between the center of the two bounding boxes.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
+
+    Returns : A matrix systolic rows, diastolic columns, and distances as entries.
+    """
 
 
 def show_detections(image):
