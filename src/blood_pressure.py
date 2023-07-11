@@ -471,6 +471,7 @@ def find_timestamp_for_bboxes(
     Returns : A list with BloodPressures sorted by timestamp.
     """
     dists = get_x_dists_matrix(bp_bounding_boxes)
+    matches, non_matches = filter_non_matches(bp_bounding_boxes, dists)
 
 
 def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[float]]:
@@ -482,6 +483,21 @@ def get_x_dists_matrix(bp_bounding_boxes: Dict[str, List[float]]) -> List[List[f
         bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
 
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
+    """
+
+
+def filter_non_matches(
+    bp_bounding_boxes: Dict[str, List[float]], dists: List[List[float]]
+) -> Tuple(Dict[str, List[float]], Dict[str, List[float]]):
+    """Removes bp detections which don't have a pair until there is an equal amount
+    of systolic and diastolic predictions.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
+        dists - the matrix of distances between the systolic and diastolic boxes.
+
+    Returns : The predictions separated into two different dictionaries as
+              a tuple (matches, non-matches)
     """
 
 
