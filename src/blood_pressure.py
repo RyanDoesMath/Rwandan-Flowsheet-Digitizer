@@ -28,7 +28,7 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    box: List[Tuple[float]]
+    boxes: Tuple[List[float]]
     systolic: int
     diastolic: int
     timestamp: int
@@ -529,7 +529,7 @@ def filter_non_matches(
     def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
         return list(map(list, zip(*dists)))
 
-    def get_index_of_list_with_largest_element(dists: List[List[float]]) -> int:
+    def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
         list_with_largest_minimum = sorted(dists, key=min)[-1]
         return dists.index(list_with_largest_minimum)
 
@@ -546,33 +546,65 @@ def filter_non_matches(
 
     non_matches = []
     while num_rows > num_columns:
-        non_match_index = get_index_of_list_with_largest_element(dists)
+        non_match_index = get_index_of_list_with_largest_min_val(dists)
         non_matches.append(non_match_index)
     if dists_was_tranposed:
         dists = transpose_dists(dists)
         non_matches = [
-            BloodPressure(bp_bounding_boxes["diastolic"][x], -1, -1, -1)
+            BloodPressure((bp_bounding_boxes["diastolic"][x]), -1, -1, -1)
             for x in non_matches
         ]
     else:
         non_matches = [
-            BloodPressure(bp_bounding_boxes["systolic"][x], -1, -1, -1)
+            BloodPressure((bp_bounding_boxes["systolic"][x]), -1, -1, -1)
             for x in non_matches
         ]
 
     return dists, non_matches
 
 
-def generate_matches(dists: List[List[float]]) -> List[BloodPressure]:
+def generate_matches(
+    dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
+) -> List[BloodPressure]:
     """Generates a list of matched blood pressures.
 
     Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
         dists - the matrix of distances where the rows correspond to systolic
                 boxes and the columns correspond to diastolic boxes. This matrix
                 has already had non-matches removed so it is square.
 
     Returns : A list of BloodPressure structs.
     """
+
+    def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
+        list_with_smallest_minimum = sorted(dists, key=min)[0]
+        return dists.index(list_with_smallest_minimum)
+
+    def get_index_of_smallest_val(row: List[float]) -> int:
+        return row.index(min(row))
+
+    matches = []
+    while len(dists) > 0:
+        smallest_sys = get_index_of_list_with_smallest_min_val(dists)
+        smallest_dia = get_index_of_smallest_val(dists[smallest_sys])
+        matches.append(
+            BloodPressure(
+                (
+                    bp_bounding_boxes["systolic"][smallest_sys],
+                    bp_bounding_boxes["diastolic"][smallest_dia],
+                ),
+                -1,
+                -1,
+                -1,
+            )
+        )
+        del bp_bounding_boxes["systolic"][smallest_sys]
+        del bp_bounding_boxes["diastolic"][smallest_dia]
+        for row in dists:
+            del row[smallest_dia]
+        del dists[smallest_sys]
+    return matches
 
 
 def timestamp_blood_pressures(
