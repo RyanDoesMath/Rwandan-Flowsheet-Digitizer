@@ -10,7 +10,6 @@ import numpy as np
 from ultralytics import YOLO
 import tiles
 
-
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
 
