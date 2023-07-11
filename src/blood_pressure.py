@@ -8,8 +8,6 @@ import cv2
 import pandas as pd
 import numpy as np
 from ultralytics import YOLO
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
 import tiles
 
 
@@ -486,7 +484,7 @@ def find_timestamp_for_bboxes(
     dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
     matches = generate_matches(dists)
     timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
-    return matches + non_matches
+    return timestamped_blood_pressures
 
 
 def generate_x_dists_matrix(
@@ -619,6 +617,8 @@ def timestamp_blood_pressures(
     """
 
     def average_x_coord(blood_pressure: BloodPressure) -> float:
+        if len(blood_pressure.boxes) == 1:
+            return blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
         sys_x_center = blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
         dia_x_center = blood_pressure.boxes[1][2] - blood_pressure.boxes[1][0]
         return (sys_x_center + dia_x_center) / 2
