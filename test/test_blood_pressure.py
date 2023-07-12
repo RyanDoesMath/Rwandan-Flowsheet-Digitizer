@@ -83,6 +83,36 @@ class TestTimestampImputation(unittest.TestCase):
             2,
         )
 
+    def test_get_index_of_list_with_smallest_min_val_standard(self):
+        """Tests the get_index_of_list_with_smallest_min_val function."""
+        fn_input = [[2, 3, 4], [4, 7, 1], [7, 8, 7]]
+        self.assertEqual(
+            blood_pressure.get_index_of_list_with_smallest_min_val(fn_input), 1
+        )
+        fn_input = [[4, 7, 1], [4, 7, 1], [4, 7, 1]]
+        self.assertEqual(
+            blood_pressure.get_index_of_list_with_smallest_min_val(fn_input), 0
+        )
+
+    def test_get_index_of_list_with_smallest_min_val_empty_list(self):
+        """Tests the get_index_of_list_with_smallest_min_val function with
+        an empty list as input."""
+        fn_input = []
+        self.assertEqual(
+            blood_pressure.get_index_of_list_with_smallest_min_val(fn_input), None
+        )
+
+    def test_get_index_of_smallest_val_standard(self):
+        """Tests the get_index_of_smallest_val function."""
+        self.assertEqual(blood_pressure.get_index_of_smallest_val([1, 0, 3]), 1)
+        self.assertEqual(blood_pressure.get_index_of_smallest_val([-1, 0, 3]), 0)
+        self.assertEqual(blood_pressure.get_index_of_smallest_val([1, 0, 0]), 1)
+        self.assertEqual(blood_pressure.get_index_of_smallest_val([10, 20, 3]), 2)
+
+    def test_get_index_of_smallest_val_empty_list(self):
+        """Tests the get_index_of_smallest_val function with an empty list."""
+        self.assertEqual(blood_pressure.get_index_of_smallest_val([]), None)
+
     def test_generate_x_dists_matrix(self):
         """Tests the generate_x_dists_matrix function."""
         fn_input = {

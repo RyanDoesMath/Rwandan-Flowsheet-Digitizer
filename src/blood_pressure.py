@@ -1,6 +1,7 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
+import warnings
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw
@@ -600,13 +601,25 @@ def generate_matches(
 
 def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
     """Gets the index of the list in dists with the smallest minimum value."""
-    list_with_smallest_minimum = sorted(dists, key=min)[0]
-    return dists.index(list_with_smallest_minimum)
+    try:
+        list_with_smallest_minimum = sorted(dists, key=min)[0]
+        return dists.index(list_with_smallest_minimum)
+    except IndexError as err:
+        print(err)
+        warnings.warn(
+            "Empty list passed into get_index_of_list_with_smallest_min_val()."
+        )
+        return None
 
 
 def get_index_of_smallest_val(row: List[float]) -> int:
     """Gets the index of the smallest value in a list."""
-    return row.index(min(row))
+    try:
+        return row.index(min(row))
+    except ValueError as err:
+        print(err)
+        warnings.warn("Empty list passed into get_index_of_smallest_val().")
+        return None
 
 
 def timestamp_blood_pressures(
