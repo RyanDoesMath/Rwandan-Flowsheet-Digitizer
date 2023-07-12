@@ -25,7 +25,8 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    boxes: Tuple[List[float]]
+    systolic_box: List[float]
+    diastolic_box: List[float]
     systolic: int
     diastolic: int
     timestamp: int
@@ -546,12 +547,24 @@ def filter_non_matches(
     if dists_was_tranposed:
         dists = transpose_dists(dists)
         non_matches = [
-            BloodPressure((bp_bounding_boxes["diastolic"][x]), -1, -1, -1)
+            BloodPressure(
+                systolic_box=None,
+                diastolic_box=bp_bounding_boxes["diastolic"][x],
+                systolic=-1,
+                diastolic=-1,
+                timestamp=-1,
+            )
             for x in non_matches
         ]
     else:
         non_matches = [
-            BloodPressure((bp_bounding_boxes["systolic"][x]), -1, -1, -1)
+            BloodPressure(
+                systolic_box=bp_bounding_boxes["systolic"][x],
+                diastolic_box=None,
+                systolic=-1,
+                diastolic=-1,
+                timestamp=-1,
+            )
             for x in non_matches
         ]
 

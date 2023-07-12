@@ -113,7 +113,10 @@ class TestTimestampImputation(unittest.TestCase):
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
             "diastolic": [[0, 1, 1, 2]],
         }
-        true_output = ([[0]], [blood_pressure.BloodPressure([1, 0, 2, 1], -1, -1, -1)])
+        true_output = (
+            [[0]],
+            [blood_pressure.BloodPressure([1, 0, 2, 1], None, -1, -1, -1)],
+        )
         self.assertEqual(
             blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
             true_output,
