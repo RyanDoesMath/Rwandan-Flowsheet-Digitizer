@@ -99,15 +99,25 @@ class TestTimestampImputation(unittest.TestCase):
         self.assertEqual(
             blood_pressure.generate_x_dists_matrix(fn_input), [[1, 2], [0, 1]]
         )
+
+    def test_generate_x_dists_matrix_non_square(self):
+        """Tests the generate_x_dists_matrix function with a non-square input."""
         fn_input = {
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
             "diastolic": [[0, 1, 1, 2]],
         }
         self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [[0], [1]])
 
-    def test_filter_non_matches(self):
-        """Tests the filter_non_matches function."""
-        # standard case.
+    def test_generate_x_dists_matrix_no_diastolic(self):
+        """Tests the generate_x_dists_matrix function with no diastolic boxes."""
+        fn_input = {
+            "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "diastolic": [],
+        }
+        self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [])
+
+    def test_filter_non_matches_standard(self):
+        """Tests the filter_non_matches function with the standard case."""
         dist_input = [[0], [1]]
         bp_bounding_boxes_input = {
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
@@ -115,14 +125,15 @@ class TestTimestampImputation(unittest.TestCase):
         }
         true_output = (
             [[0]],
-            [blood_pressure.BloodPressure([1, 0, 2, 1], None, -1, -1, -1)],
+            [blood_pressure.BloodPressure(systolic_box=[1, 0, 2, 1])],
         )
         self.assertEqual(
             blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
             true_output,
         )
 
-        # no non matches.
+    def test_filter_non_matches_no_non_matches(self):
+        """Tests the filter_non_matches function where there are no non-matches."""
         dist_input = [[0, 1], [1, 0]]
         bp_bounding_boxes_input = {
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
@@ -134,7 +145,9 @@ class TestTimestampImputation(unittest.TestCase):
             true_output,
         )
 
-        # Test the transposing feature.
+    def test_filter_non_matches_transpose(self):
+        """Tests the filter_non_matches function where there are more diastolic than
+        systolic boxes, so the function has to transpose the dists matrix."""
         dist_input = [[0, 1]]
         bp_bounding_boxes_input = {
             "diastolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
@@ -142,11 +155,82 @@ class TestTimestampImputation(unittest.TestCase):
         }
         true_output = (
             [[0]],
-            [blood_pressure.BloodPressure(None, [1, 0, 2, 1], -1, -1, -1)],
+            [blood_pressure.BloodPressure(diastolic_box=[1, 0, 2, 1])],
         )
         self.assertEqual(
             blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
             true_output,
+        )
+
+    def test_filter_non_matches_empty(self):
+        """Tests the filter_non_matches function with the empty case."""
+        dist_input = []
+        bp_bounding_boxes_input = {"systolic": [], "diastolic": []}
+        self.assertEqual(
+            blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
+            ([], []),
+        )
+
+    def test_timestamp_blood_pressures_standard(self):
+        """Tests the timestamp_blood_pressures function."""
+        fn_input = [
+            blood_pressure.BloodPressure(
+                systolic_box=[1, 0, 2, 1], diastolic_box=[1, 1, 2, 2]
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[0, 0, 1, 1], diastolic_box=[0, 1, 1, 2]
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[2, 0, 3, 1], diastolic_box=[2, 1, 3, 2]
+            ),
+        ]
+        true_output = [
+            blood_pressure.BloodPressure(
+                systolic_box=[0, 0, 1, 1],
+                diastolic_box=[0, 1, 1, 2],
+                timestamp=0,
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[1, 0, 2, 1],
+                diastolic_box=[1, 1, 2, 2],
+                timestamp=5,
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[2, 0, 3, 1],
+                diastolic_box=[2, 1, 3, 2],
+                timestamp=10,
+            ),
+        ]
+        self.assertEqual(
+            blood_pressure.timestamp_blood_pressures(fn_input), true_output
+        )
+
+    def test_timestamp_blood_pressures_missing_boxes(self):
+        """Tests the timestamp_blood_pressures function with some of the boxes missing."""
+        fn_input = [
+            blood_pressure.BloodPressure(systolic_box=[1, 0, 2, 1]),
+            blood_pressure.BloodPressure(diastolic_box=[0, 1, 1, 2]),
+            blood_pressure.BloodPressure(
+                systolic_box=[2, 0, 3, 1], diastolic_box=[2, 1, 3, 2]
+            ),
+        ]
+        true_output = [
+            blood_pressure.BloodPressure(
+                diastolic_box=[0, 1, 1, 2],
+                timestamp=0,
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[1, 0, 2, 1],
+                timestamp=5,
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[2, 0, 3, 1],
+                diastolic_box=[2, 1, 3, 2],
+                timestamp=10,
+            ),
+        ]
+        self.assertEqual(
+            blood_pressure.timestamp_blood_pressures(fn_input), true_output
         )
 
 

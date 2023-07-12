@@ -25,23 +25,11 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    systolic_box: List[float]
-    diastolic_box: List[float]
-    systolic: int
-    diastolic: int
-    timestamp: int
-
-    def set_systolic(self, value: int):
-        """Sets the systolic blood pressure."""
-        self.systolic = value
-
-    def set_diastolic(self, value: int):
-        """Sets the diastolic blood pressure."""
-        self.diastolic = value
-
-    def set_timestamp(self, value: int):
-        """Sets the timestamp."""
-        self.timestamp = value
+    systolic_box: List[float] = None
+    diastolic_box: List[float] = None
+    systolic: int = None
+    diastolic: int = None
+    timestamp: int = None
 
 
 def extract_blood_pressure(image) -> dict:
@@ -499,6 +487,12 @@ def generate_x_dists_matrix(
 
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
     """
+    if (
+        len(bp_bounding_boxes["systolic"]) == 0
+        or len(bp_bounding_boxes["diastolic"]) == 0
+    ):
+        return []
+
     dists = []
     systolic_centers = [
         box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["systolic"]
@@ -527,7 +521,8 @@ def filter_non_matches(
     Returns : a tuple with the distances matrix sans the non-matches and the
               non-matches as BloodPressure structs.
     """
-
+    if len(dists) == 0:
+        return ([], [])
     dists_was_tranposed = False
     num_rows = len(dists)
     num_columns = len(dists[0])
@@ -544,27 +539,16 @@ def filter_non_matches(
         del dists[non_match_index]
         num_rows = len(dists)
         num_columns = len(dists[0])
+
     if dists_was_tranposed:
         dists = transpose_dists(dists)
         non_matches = [
-            BloodPressure(
-                systolic_box=None,
-                diastolic_box=bp_bounding_boxes["diastolic"][x],
-                systolic=-1,
-                diastolic=-1,
-                timestamp=-1,
-            )
+            BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][x])
             for x in non_matches
         ]
     else:
         non_matches = [
-            BloodPressure(
-                systolic_box=bp_bounding_boxes["systolic"][x],
-                diastolic_box=None,
-                systolic=-1,
-                diastolic=-1,
-                timestamp=-1,
-            )
+            BloodPressure(systolic_box=bp_bounding_boxes["systolic"][x])
             for x in non_matches
         ]
 
@@ -602,13 +586,8 @@ def generate_matches(
         smallest_dia = get_index_of_smallest_val(dists[smallest_sys])
         matches.append(
             BloodPressure(
-                (
-                    bp_bounding_boxes["systolic"][smallest_sys],
-                    bp_bounding_boxes["diastolic"][smallest_dia],
-                ),
-                -1,
-                -1,
-                -1,
+                systolic_box=bp_bounding_boxes["systolic"][smallest_sys],
+                diastolic_box=bp_bounding_boxes["diastolic"][smallest_dia],
             )
         )
         del bp_bounding_boxes["systolic"][smallest_sys]
@@ -641,15 +620,24 @@ def timestamp_blood_pressures(
     Returns : the blood pressure structs with timestamps.
     """
 
+    def compute_box_x_center(box: List[float]):
+        return box[2] + (box[2] - box[0])
+
     def average_x_coord(blood_pressure: BloodPressure) -> float:
-        if len(blood_pressure.boxes) == 1:
-            return blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
-        sys_x_center = blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
-        dia_x_center = blood_pressure.boxes[1][2] - blood_pressure.boxes[1][0]
+        no_systolic_box = blood_pressure.systolic_box is None
+        no_diastolic_box = blood_pressure.diastolic_box is None
+        if no_systolic_box:
+            return compute_box_x_center(blood_pressure.diastolic_box)
+        if no_diastolic_box:
+            return compute_box_x_center(blood_pressure.systolic_box)
+        sys_x_center = compute_box_x_center(blood_pressure.systolic_box)
+        dia_x_center = compute_box_x_center(blood_pressure.diastolic_box)
         return (sys_x_center + dia_x_center) / 2
 
-    stamped_bps = sorted(average_x_coord, blood_pressures)
-    stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
+    stamped_bps = sorted(blood_pressures, key=average_x_coord)
+    for index, blood_pressure in enumerate(stamped_bps):
+        blood_pressure.timestamp = index * 5
+    # stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
     return stamped_bps
 
 
