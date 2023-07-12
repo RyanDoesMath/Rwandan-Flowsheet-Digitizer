@@ -99,6 +99,46 @@ class TestTimestampImputation(unittest.TestCase):
         self.assertEqual(
             blood_pressure.generate_x_dists_matrix(fn_input), [[1, 2], [0, 1]]
         )
+        fn_input = {
+            "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "diastolic": [[0, 1, 1, 2]],
+        }
+        self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [[0], [1]])
+
+    def test_filter_non_matches(self):
+        """Tests the filter_non_matches function."""
+        # standard case.
+        dist_input = [[0], [1]]
+        bp_bounding_boxes_input = {
+            "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "diastolic": [[0, 1, 1, 2]],
+        }
+        true_output = ([[0]], [blood_pressure.BloodPressure([1, 0, 2, 1], -1, -1, -1)])
+        self.assertEqual(
+            blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
+            true_output,
+        )
+
+        # no non matches.
+        dist_input = [[0, 1], [1, 0]]
+        bp_bounding_boxes_input = {
+            "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "diastolic": [[0, 1, 1, 2], [1, 1, 2, 2]],
+        }
+        true_output = (dist_input, [])
+        self.assertEqual(
+            blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
+            true_output,
+        )
+
+        # Test the transposing feature.
+        dist_input = [[0, 1]]
+        bp_bounding_boxes_input = {
+            "diastolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "systolic": [[0, 1, 1, 2]],
+        }
+        print(blood_pressure.generate_x_dists_matrix(bp_bounding_boxes_input))
+        print(blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input))
 
 
 if __name__ == "__main__":

@@ -527,8 +527,6 @@ def filter_non_matches(
               non-matches as BloodPressure structs.
     """
 
-    # check if rows > columns. if so transpose, and make sure to detranspose
-    # by the end.
     dists_was_tranposed = False
     num_rows = len(dists)
     num_columns = len(dists[0])
@@ -542,6 +540,9 @@ def filter_non_matches(
     while num_rows > num_columns:
         non_match_index = get_index_of_list_with_largest_min_val(dists)
         non_matches.append(non_match_index)
+        del dists[non_match_index]
+        num_rows = len(dists)
+        num_columns = len(dists[0])
     if dists_was_tranposed:
         dists = transpose_dists(dists)
         non_matches = [
