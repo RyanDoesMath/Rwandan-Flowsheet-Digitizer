@@ -1,16 +1,36 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
-from typing import List, Tuple
+import warnings
+from typing import List, Tuple, Dict
+from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
 import pandas as pd
 import numpy as np
 from ultralytics import YOLO
-
+import tiles
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
+
+
+@dataclass
+class BloodPressure:
+    """Data class that is a struct for blood pressure.
+
+    Attributes :
+        box - The bounding box for the detections
+        systolic - The systolic blood pressure.
+        diastolic - The diastolic blood pressure.
+        timestamp - The timestamp.
+    """
+
+    systolic_box: List[float] = None
+    diastolic_box: List[float] = None
+    systolic: int = None
+    diastolic: int = None
+    timestamp: int = None
 
 
 def extract_blood_pressure(image) -> dict:
@@ -23,39 +43,29 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     image = crop_legend_out(image)
-    systolic_pred = BLOOD_PRESSURE_MODEL(image)[0]
-    diastolic_pred = (
-        BLOOD_PRESSURE_MODEL(image.transpose(Image.Transpose.FLIP_TOP_BOTTOM))[0]
+    systolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image,
+        rows=4,
+        columns=10,
+        stride=1 / 2,
+        overlap_tolerance=0.5,
     )
-    print(systolic_pred.boxes.data, diastolic_pred.boxes.data)
-    systolic_pred, diastolic_pred = filter_and_adjust_bp_predictions(
-        systolic_pred, diastolic_pred, image
+    diastolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        rows=4,
+        columns=10,
+        stride=1 / 2,
+        overlap_tolerance=0.5,
     )
-    bp_pred = combine_predictions(systolic_pred, diastolic_pred)
+    print(systolic_pred, diastolic_pred)
+    diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
+    bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
+    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bbox(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
-
-
-def filter_and_adjust_bp_predictions(
-    systolic_predictions, diastolic_predictions, image
-):
-    """Filters the blood pressure predictions and unflips the diastolic predictions."""
-    systolic_predictions = filter_bp_predictions(systolic_predictions)
-    diastolic_predictions = filter_bp_predictions(diastolic_predictions)
-    diastolic_predictions = adjust_diastolic_preds(diastolic_predictions, image.size[1])
-    return systolic_predictions, diastolic_predictions
-
-
-def combine_predictions(systolic_predictions, diastolic_predictions):
-    """Combines the predictions together into one dataframe."""
-    systolic_predictions["name"] = "systolic"
-    diastolic_predictions["name"] = "diastolic"
-    bp_predictions = pd.concat([systolic_predictions, diastolic_predictions])
-    bp_predictions = bp_predictions.reset_index(drop=True)
-    bp_predictions = bp_predictions.drop(["flagged_for_removal", "class"], axis=1)
-    return bp_predictions
 
 
 def crop_legend_out(image):
@@ -126,7 +136,6 @@ def get_twohundred_and_thirty_box(
     thirty_boxes = list(
         filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
     )
-    print(two_hundred_boxes, thirty_boxes)
     if len(two_hundred_boxes) == 0:
         raise ValueError("No detection for 200 on the legend.")
     if len(thirty_boxes) == 0:
@@ -162,46 +171,6 @@ def bb_intersection(box_a, box_b):
     # compute the area of intersection rectangle
     area_of_intersection = (right - left) * (top - bottom)
     return area_of_intersection
-
-
-def box_area(box):
-    """Computes the area of a box."""
-    return (box[2] - box[0]) * (box[3] - box[1])
-
-
-def filter_bp_predictions(preds):
-    """Filters overlapping bounding boxes out of the predictions.
-
-    Parameters:
-        preds - the pandas prediction dataframe from the yolo model.
-    Returns: A pandas dataframe with less or no erroneous predictions.
-    """
-    threshold = 0.5
-    temp = preds.copy()
-    temp["flagged_for_removal"] = False
-
-    def get_box(row):
-        return (row.xmin, row.ymin, row.xmax, row.ymax)
-
-    for _, this_row in preds.iterrows():
-        this_box = get_box(this_row)
-        for that_ix, that_row in preds.iterrows():
-            that_box = get_box(that_row)
-            percent_overlap = bb_intersection(this_box, that_box) / box_area(this_box)
-            if percent_overlap > threshold and percent_overlap != 1:
-                temp.at[that_ix, "flagged_for_removal"] = True
-
-    detections_filtered = remove_filtered_detections(temp)
-
-    return detections_filtered
-
-
-def remove_filtered_detections(detections_flagged):
-    """Removes the filtered detections from the dataframe."""
-    mask = ~detections_flagged["flagged_for_removal"]
-    detections_filtered = detections_flagged[mask].copy()
-    detections_filtered.reset_index(drop=True, inplace=True)
-    return detections_filtered
 
 
 def adjust_diastolic_preds(preds, image_height):
@@ -434,35 +403,6 @@ def binarized_horizontal_lines(img):
     return horizontal
 
 
-def binarized_vertical_lines(img):
-    """Binarizes an image and removes everything except vertical lines.
-
-    Parameters:
-        img - the image to binarize and remove all non-vertical lines from.
-
-    Returns: A version of the image that is binarized and has only vertical lines."""
-    cv2_img = np.array(img)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    # convert to greyscale
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    # greyscale to binary
-    gray = cv2.bitwise_not(gray)
-    bw = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
-    )
-    vertical = np.copy(bw)
-
-    # Specify size on vertical axis
-    rows = vertical.shape[0]
-    verticalsize = rows // 30
-    # Create structure element for extracting vertical lines through morphology operations
-    vertical_structure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
-    # Apply morphology operations
-    vertical = cv2.erode(vertical, vertical_structure, iterations=2)
-    vertical = cv2.dilate(vertical, vertical_structure, iterations=2)
-    return vertical
-
-
 def bp_matrix_to_np_arrays(bp_matrix):
     """Converts the bp matrix to a 2d numpy array."""
     ret_arr = []
@@ -480,87 +420,6 @@ def compute_center(row, height):
     ymax = height - row.ymax
     xmin, xmax = row.xmin, row.xmax
     return (int(xmax - ((xmax - xmin) / 2)), int(ymin - ((ymin - ymax) / 2)))
-
-
-def find_timestamp_for_bbox(image, preds):
-    """Gets the timestamp for each bounding box in the predictions.
-
-    Parameters:
-        image - The image to find the timestamp for.
-        preds - A dataframe with the bounding boxes.
-
-    Returns: A list of timestamps to put into a column of the dataframe.
-    """
-    predicted_timestamps = []
-    timestamp_at_pixel = get_minutes_array(image)
-
-    for _, row in preds.iterrows():
-        value = timestamp_at_pixel[int(((row.xmax - row.xmin) / 2) + row.xmin)]
-        predicted_timestamps.append(value)
-
-    return predicted_timestamps
-
-
-def get_minutes_array(image):
-    """Gets a 1d array with the minute for each pixel value on the x axis of the image.
-
-    This method is trash :(
-
-    Parameters:
-        image - the image to predict on.
-
-    Returns - a 1d array with the minute for each pixel value on the x axis of the image.
-    """
-    vertical = binarized_vertical_lines(image)
-    y_axis_hist = np.sum(vertical / 255, axis=0)
-    y_axis_hist = [x / max(y_axis_hist) for x in y_axis_hist]
-
-    five_minute_markers = np.array([1 if y >= 0.3 else 0 for y in y_axis_hist])
-    minute = 0
-    temp = five_minute_markers.copy()
-    previous = 0
-    counter = 0
-    for index, current in enumerate(five_minute_markers):
-        if current == 1 and previous == 0:
-            temp[index] = minute
-        elif current == 1 and previous == 1:
-            temp[index] = minute
-        elif current == 0 and previous == 1:
-            minute += 5
-        previous = current
-    temp[0] = 0
-
-    closest_right = 0
-    closest_left = 0
-    counter_right = 0
-    counter_left = 0
-    final_array = temp.copy()
-    for index, i in enumerate(temp):
-        if i != 0:
-            continue
-        while closest_right == 0 and index + counter_right < len(temp):
-            if index + counter > len(temp):
-                break
-            closest_right = temp[index + counter_right]
-            counter_right += 1
-
-        while closest_left == 0 and index - counter_left > 0:
-            if index - counter < 0:
-                break
-            closest_left = temp[index - counter_left]
-            counter_left += 1
-
-        if counter_right < counter_left:
-            final_array[index] = closest_right
-        elif counter_left <= counter_right:
-            final_array[index] = closest_left
-        closest_right = 0
-        closest_left = 0
-        counter_right = 0
-        counter_left = 0
-
-    final_array = [0 if i == 1 else i for i in final_array]
-    return final_array
 
 
 def filter_duplicate_detections(detections):
@@ -595,6 +454,215 @@ def filter_duplicate_detections_for_one_bp_type(detections):
         for index in temp.index[1:]:
             ix_to_remove.append(index)
     return bps[~(bps.index.isin(ix_to_remove))]
+
+
+def find_timestamp_for_bboxes(
+    bp_bounding_boxes: Dict[str, List[float]]
+) -> List[BloodPressure]:
+    """Finds the timestamp for all bounding boxes detected.
+
+    This function goes through a series of steps to impute a timestamp based on
+    x distances.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes detected as a tuple (sys, dia)
+
+    Returns : A list with BloodPressures sorted by timestamp.
+    """
+    dists = generate_x_dists_matrix(bp_bounding_boxes)
+    dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
+    matches = generate_matches(dists, bp_bounding_boxes)
+    timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
+    return timestamped_blood_pressures
+
+
+def generate_x_dists_matrix(
+    bp_bounding_boxes: Dict[str, List[float]]
+) -> List[List[float]]:
+    """Returns a matrix where each row corresponds to a systolic blood pressure,
+    each column corresponds to a diastolic blood pressure, and the entries are
+    the x distances between the center of the two bounding boxes.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
+
+    Returns : A matrix systolic rows, diastolic columns, and distances as entries.
+    """
+    dists = []
+    systolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["systolic"]
+    ]
+    diastolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["diastolic"]
+    ]
+    for sys_center in systolic_centers:
+        sys_row = []
+        for dia_center in diastolic_centers:
+            sys_row.append(abs(sys_center - dia_center))
+        dists.append(sys_row)
+    return dists
+
+
+def filter_non_matches(
+    dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
+) -> Tuple[List[List[float]], List[BloodPressure]]:
+    """If there are more systolic than diastolic boxes (or vice versa), this
+    method will find the systolic box which is the furthest x-distance from a
+    matching diastolic box, then remove it and create a BloodPressure struct
+    with None for the diastolic box.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
+        dists - the matrix of distances where the rows correspond to systolic
+                boxes and the columns correspond to diastolic boxes.
+
+    Returns : a tuple with the distances matrix sans the non-matches and the
+              non-matches as BloodPressure structs.
+    """
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections and no_diastolic_detections:
+        return ([], [])
+    if no_systolic_detections:
+        return (
+            dists,
+            [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
+        )
+    if no_diastolic_detections:
+        return (
+            dists,
+            [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
+        )
+    dists_was_tranposed = False
+    num_rows = len(dists)
+    num_columns = len(dists[0])
+    if num_columns > num_rows:
+        dists = transpose_dists(dists)
+        num_rows = len(dists)
+        num_columns = len(dists[0])
+        dists_was_tranposed = True
+
+    non_matches = []
+    while num_rows > num_columns:
+        non_match_index = get_index_of_list_with_largest_min_val(dists)
+        non_matches.append(non_match_index)
+        del dists[non_match_index]
+        num_rows = len(dists)
+        num_columns = len(dists[0])
+
+    if dists_was_tranposed:
+        dists = transpose_dists(dists)
+        non_matches = [
+            BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][x])
+            for x in non_matches
+        ]
+    else:
+        non_matches = [
+            BloodPressure(systolic_box=bp_bounding_boxes["systolic"][x])
+            for x in non_matches
+        ]
+
+    return dists, non_matches
+
+
+def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
+    """Transposes the dists matrix."""
+    return list(map(list, zip(*dists)))
+
+
+def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the largest minimum value."""
+    list_with_largest_minimum = sorted(dists, key=min)[-1]
+    return dists.index(list_with_largest_minimum)
+
+
+def generate_matches(
+    dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
+) -> List[BloodPressure]:
+    """Generates a list of matched blood pressures.
+
+    Args :
+        bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
+        dists - the matrix of distances where the rows correspond to systolic
+                boxes and the columns correspond to diastolic boxes. This matrix
+                has already had non-matches removed so it is square.
+
+    Returns : A list of BloodPressure structs.
+    """
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections or no_diastolic_detections:
+        return []
+
+    matches = []
+    while len(dists) > 0:
+        smallest_sys = get_index_of_list_with_smallest_min_val(dists)
+        smallest_dia = get_index_of_smallest_val(dists[smallest_sys])
+        matches.append(
+            BloodPressure(
+                systolic_box=bp_bounding_boxes["systolic"][smallest_sys],
+                diastolic_box=bp_bounding_boxes["diastolic"][smallest_dia],
+            )
+        )
+        del bp_bounding_boxes["systolic"][smallest_sys]
+        del bp_bounding_boxes["diastolic"][smallest_dia]
+        for row in dists:
+            del row[smallest_dia]
+        del dists[smallest_sys]
+    return matches
+
+
+def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the smallest minimum value."""
+    try:
+        list_with_smallest_minimum = sorted(dists, key=min)[0]
+        return dists.index(list_with_smallest_minimum)
+    except IndexError as _:
+        warnings.warn(
+            "Empty list passed into get_index_of_list_with_smallest_min_val()."
+        )
+        return None
+
+
+def get_index_of_smallest_val(row: List[float]) -> int:
+    """Gets the index of the smallest value in a list."""
+    try:
+        return row.index(min(row))
+    except ValueError as _:
+        warnings.warn("Empty list passed into get_index_of_smallest_val().")
+        return None
+
+
+def timestamp_blood_pressures(
+    blood_pressures: List[BloodPressure],
+) -> List[BloodPressure]:
+    """Applies a timestamp to all the blood pressure structs.
+
+    Args :
+        blood_pressures - the blood pressure structs without timestamps.
+
+    Returns : the blood pressure structs with timestamps.
+    """
+
+    def compute_box_x_center(box: List[float]):
+        return box[2] + (box[2] - box[0])
+
+    def average_x_coord(blood_pressure: BloodPressure) -> float:
+        no_systolic_box = blood_pressure.systolic_box is None
+        no_diastolic_box = blood_pressure.diastolic_box is None
+        if no_systolic_box:
+            return compute_box_x_center(blood_pressure.diastolic_box)
+        if no_diastolic_box:
+            return compute_box_x_center(blood_pressure.systolic_box)
+        sys_x_center = compute_box_x_center(blood_pressure.systolic_box)
+        dia_x_center = compute_box_x_center(blood_pressure.diastolic_box)
+        return (sys_x_center + dia_x_center) / 2
+
+    stamped_bps = sorted(blood_pressures, key=average_x_coord)
+    for index, blood_pressure in enumerate(stamped_bps):
+        blood_pressure.timestamp = index * 5
+    # stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
+    return stamped_bps
 
 
 def show_detections(image):
