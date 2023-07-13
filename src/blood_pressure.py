@@ -261,6 +261,11 @@ def get_bp_values_for_all_y_pixels(image):
 
     Returns : a list with a BP value for every y-pixel.
     """
+    y_hist = get_y_axis_histogram(image)
+    proposed_bp_lines = propose_array_of_bp_lines(y_hist)
+    bp_lines = correct_array_of_bp_lines(proposed_bp_lines)
+    bp_array = apply_bp_values_to_lines(bp_lines)
+    return bp_array
 
 
 def get_y_axis_histogram(image):
@@ -283,6 +288,42 @@ def get_y_axis_histogram(image):
     grayscale_image = image.copy().convert("L")
     y_axis_hist = np.sum(np.array(grayscale_image) / 255, axis=1)
     return y_axis_hist
+
+
+def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
+    """Proposes an array where 0 indicates space between the BP demarkations,
+    and 1 indicates a line that demarkates where 10 mmHg have changed, that is
+    the location of the horizontal lines that encode blood pressure.
+
+    Args :
+        bp_hist - the binarized histogram of the BP image with horizontal lines
+        extracted.
+
+    Returns : An array of 0s and 1s with proposed locations for the lines.
+    """
+
+
+def correct_array_of_bp_lines(bp_lines: np.array) -> np.array:
+    """Removes erroneous proposed lines, and inserts lines that track with the
+    structure of the sheet as well as a-priori analysis of where the lines
+    typically are.
+
+    Args :
+        bp_lines - a numpy array of 0s and 1s that propose locations for the bp lines.
+
+    Returns : A corrected array of bp_lines.
+    """
+
+
+def apply_bp_values_to_lines(bp_lines: np.array) -> np.array:
+    """Applies values to the bp lines array of 1s and 0s.
+
+    Args :
+        bp_lines - the array that contains the locations of the horizontal
+                   lines on the image that denote 10 bp changes.
+
+    Returns : An array where a BP mmHg value is associated with each item.
+    """
 
 
 def assign_bp_to_array_vals(thresholded_array):
