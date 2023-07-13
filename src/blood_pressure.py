@@ -1,6 +1,7 @@
 """The blood_pressure module extracts the data from the blood
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
+import warnings
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw
@@ -9,7 +10,6 @@ import pandas as pd
 import numpy as np
 from ultralytics import YOLO
 import tiles
-
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
@@ -26,22 +26,11 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    boxes: Tuple[List[float]]
-    systolic: int
-    diastolic: int
-    timestamp: int
-
-    def set_systolic(self, value: int):
-        """Sets the systolic blood pressure."""
-        self.systolic = value
-
-    def set_diastolic(self, value: int):
-        """Sets the diastolic blood pressure."""
-        self.diastolic = value
-
-    def set_timestamp(self, value: int):
-        """Sets the timestamp."""
-        self.timestamp = value
+    systolic_box: List[float] = None
+    diastolic_box: List[float] = None
+    systolic: int = None
+    diastolic: int = None
+    timestamp: int = None
 
 
 def extract_blood_pressure(image) -> dict:
@@ -482,7 +471,7 @@ def find_timestamp_for_bboxes(
     """
     dists = generate_x_dists_matrix(bp_bounding_boxes)
     dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
-    matches = generate_matches(dists)
+    matches = generate_matches(dists, bp_bounding_boxes)
     timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
     return timestamped_blood_pressures
 
@@ -500,8 +489,12 @@ def generate_x_dists_matrix(
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
     """
     dists = []
-    systolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["systolic"]]
-    diastolic_centers = [box[2] - box[0] for box in bp_bounding_boxes["diastolic"]]
+    systolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["systolic"]
+    ]
+    diastolic_centers = [
+        box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["diastolic"]
+    ]
     for sys_center in systolic_centers:
         sys_row = []
         for dia_center in diastolic_centers:
@@ -513,7 +506,10 @@ def generate_x_dists_matrix(
 def filter_non_matches(
     dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
 ) -> Tuple[List[List[float]], List[BloodPressure]]:
-    """
+    """If there are more systolic than diastolic boxes (or vice versa), this
+    method will find the systolic box which is the furthest x-distance from a
+    matching diastolic box, then remove it and create a BloodPressure struct
+    with None for the diastolic box.
 
     Args :
         bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
@@ -523,16 +519,20 @@ def filter_non_matches(
     Returns : a tuple with the distances matrix sans the non-matches and the
               non-matches as BloodPressure structs.
     """
-
-    def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
-        return list(map(list, zip(*dists)))
-
-    def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
-        list_with_largest_minimum = sorted(dists, key=min)[-1]
-        return dists.index(list_with_largest_minimum)
-
-    # check if rows > columns. if so transpose, and make sure to detranspose
-    # by the end.
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections and no_diastolic_detections:
+        return ([], [])
+    if no_systolic_detections:
+        return (
+            dists,
+            [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
+        )
+    if no_diastolic_detections:
+        return (
+            dists,
+            [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
+        )
     dists_was_tranposed = False
     num_rows = len(dists)
     num_columns = len(dists[0])
@@ -546,19 +546,34 @@ def filter_non_matches(
     while num_rows > num_columns:
         non_match_index = get_index_of_list_with_largest_min_val(dists)
         non_matches.append(non_match_index)
+        del dists[non_match_index]
+        num_rows = len(dists)
+        num_columns = len(dists[0])
+
     if dists_was_tranposed:
         dists = transpose_dists(dists)
         non_matches = [
-            BloodPressure((bp_bounding_boxes["diastolic"][x]), -1, -1, -1)
+            BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][x])
             for x in non_matches
         ]
     else:
         non_matches = [
-            BloodPressure((bp_bounding_boxes["systolic"][x]), -1, -1, -1)
+            BloodPressure(systolic_box=bp_bounding_boxes["systolic"][x])
             for x in non_matches
         ]
 
     return dists, non_matches
+
+
+def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
+    """Transposes the dists matrix."""
+    return list(map(list, zip(*dists)))
+
+
+def get_index_of_list_with_largest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the largest minimum value."""
+    list_with_largest_minimum = sorted(dists, key=min)[-1]
+    return dists.index(list_with_largest_minimum)
 
 
 def generate_matches(
@@ -574,13 +589,10 @@ def generate_matches(
 
     Returns : A list of BloodPressure structs.
     """
-
-    def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
-        list_with_smallest_minimum = sorted(dists, key=min)[0]
-        return dists.index(list_with_smallest_minimum)
-
-    def get_index_of_smallest_val(row: List[float]) -> int:
-        return row.index(min(row))
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections or no_diastolic_detections:
+        return []
 
     matches = []
     while len(dists) > 0:
@@ -588,13 +600,8 @@ def generate_matches(
         smallest_dia = get_index_of_smallest_val(dists[smallest_sys])
         matches.append(
             BloodPressure(
-                (
-                    bp_bounding_boxes["systolic"][smallest_sys],
-                    bp_bounding_boxes["diastolic"][smallest_dia],
-                ),
-                -1,
-                -1,
-                -1,
+                systolic_box=bp_bounding_boxes["systolic"][smallest_sys],
+                diastolic_box=bp_bounding_boxes["diastolic"][smallest_dia],
             )
         )
         del bp_bounding_boxes["systolic"][smallest_sys]
@@ -603,6 +610,27 @@ def generate_matches(
             del row[smallest_dia]
         del dists[smallest_sys]
     return matches
+
+
+def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
+    """Gets the index of the list in dists with the smallest minimum value."""
+    try:
+        list_with_smallest_minimum = sorted(dists, key=min)[0]
+        return dists.index(list_with_smallest_minimum)
+    except IndexError as _:
+        warnings.warn(
+            "Empty list passed into get_index_of_list_with_smallest_min_val()."
+        )
+        return None
+
+
+def get_index_of_smallest_val(row: List[float]) -> int:
+    """Gets the index of the smallest value in a list."""
+    try:
+        return row.index(min(row))
+    except ValueError as _:
+        warnings.warn("Empty list passed into get_index_of_smallest_val().")
+        return None
 
 
 def timestamp_blood_pressures(
@@ -616,15 +644,24 @@ def timestamp_blood_pressures(
     Returns : the blood pressure structs with timestamps.
     """
 
+    def compute_box_x_center(box: List[float]):
+        return box[2] + (box[2] - box[0])
+
     def average_x_coord(blood_pressure: BloodPressure) -> float:
-        if len(blood_pressure.boxes) == 1:
-            return blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
-        sys_x_center = blood_pressure.boxes[0][2] - blood_pressure.boxes[0][0]
-        dia_x_center = blood_pressure.boxes[1][2] - blood_pressure.boxes[1][0]
+        no_systolic_box = blood_pressure.systolic_box is None
+        no_diastolic_box = blood_pressure.diastolic_box is None
+        if no_systolic_box:
+            return compute_box_x_center(blood_pressure.diastolic_box)
+        if no_diastolic_box:
+            return compute_box_x_center(blood_pressure.systolic_box)
+        sys_x_center = compute_box_x_center(blood_pressure.systolic_box)
+        dia_x_center = compute_box_x_center(blood_pressure.diastolic_box)
         return (sys_x_center + dia_x_center) / 2
 
-    stamped_bps = sorted(average_x_coord, blood_pressures)
-    stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
+    stamped_bps = sorted(blood_pressures, key=average_x_coord)
+    for index, blood_pressure in enumerate(stamped_bps):
+        blood_pressure.timestamp = index * 5
+    # stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
     return stamped_bps
 
 
