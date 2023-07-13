@@ -220,37 +220,34 @@ def find_bp_value_for_bbox(
     """
 
 
-def binarized_horizontal_lines(img):
+def extract_horizontal_lines(image):
     """Binarizes an image and removes everything except horizontal lines.
 
-    Parameters:
-        img - the image to binarize and remove all non-horizontal lines from.
+    Args :
+        image - The PIL image to extract the horizontal lines from
 
-    Returns: A version of the image that is binarized and has only horizontal lines.
+    Returns: A PIL image that is binarized and has only horizontal lines.
     """
-    cv2_img = np.array(img)
+    cv2_img = deshadow.pil_to_cv2(image)
     cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    # convert to greyscale
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    # greyscale to binary
-    gray = cv2.bitwise_not(gray)
-    binarized = cv2.adaptiveThreshold(
+    gray = cv2.bitwise_not(cv2_img)
+    black_and_white = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
     )
-
-    horizontal = np.copy(binarized)
+    horizontal = np.copy(black_and_white)
     # Specify size on horizontal axis
     cols = horizontal.shape[1]
-    horizontal_size = cols // 30
+    horizontal_size = cols // 50
     # Create structure element for extracting horizontal lines through morphology operations
     horizontal_structure = cv2.getStructuringElement(
         cv2.MORPH_RECT, (horizontal_size, 1)
     )
     # Apply morphology operations
     horizontal = cv2.erode(horizontal, horizontal_structure)
-    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=4)
-    color_converted = cv2.cvtColor(horizontal, cv2.COLOR_BGR2RGB)
-    horizontal = Image.fromarray(color_converted)
+    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
+    horizontal = cv2.erode(horizontal, horizontal_structure)
+    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
+    horizontal = cv2.bitwise_not(horizontal)
     return horizontal
 
 
