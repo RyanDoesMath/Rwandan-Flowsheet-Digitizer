@@ -83,6 +83,11 @@ def preprocess_image(image):
     return img
 
 
+###############################################################################
+# Legend Cropping
+###############################################################################
+
+
 def crop_legend_out(image):
     """Crops out everything left of the legend.
 
@@ -196,30 +201,55 @@ def adjust_diastolic_preds(preds, image_height):
     return temp
 
 
-def find_bp_value_for_bbox(image, preds):
+###############################################################################
+# BP Values
+###############################################################################
+
+
+def find_bp_value_for_bbox(
+    image, blood_pressure_predictions: List[BloodPressure]
+) -> List[BloodPressure]:
     """Finds the blood pressure value for each bounding box in preds.
 
-    Parameters:
-        image - the image we get bounding boxes for.
-        preds - the predicted bounding boxes.
+    Args :
+        image - A PIL image of the legend cropped BP section.
+        preds -
 
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
-    predicted_bps = []
-    bp_matrix = get_bp_matrix(image)
-    for _, row in preds.iterrows():
-        cntr = compute_center(row, len(bp_matrix[0]))
-        predicted_bps.append(bp_matrix[cntr[0]][cntr[1]])
-    return predicted_bps
+    horizontal_lines = extract_horizontal_lines(image)
 
 
-def get_bp_matrix(image):
-    """Calls methods to get the blood pressure matrix from an image."""
-    bp_matrix = get_blood_pressure_matrix(binarized_horizontal_lines(image))
-    bp_matrix = bp_matrix_to_np_arrays(bp_matrix)
-    bp_matrix = np.fliplr(bp_matrix)
-    return bp_matrix
+def extract_horizontal_lines(image):
+    """Binarizes an image and removes everything except horizontal lines.
+
+    Args :
+        image - The PIL image to extract the horizontal lines from
+
+    Returns: A PIL image that is binarized and has only horizontal lines.
+    """
+    cv2_img = deshadow.pil_to_cv2(image)
+    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
+    gray = cv2.bitwise_not(cv2_img)
+    black_and_white = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
+    )
+    horizontal = np.copy(black_and_white)
+    # Specify size on horizontal axis
+    cols = horizontal.shape[1]
+    horizontal_size = cols // 50
+    # Create structure element for extracting horizontal lines through morphology operations
+    horizontal_structure = cv2.getStructuringElement(
+        cv2.MORPH_RECT, (horizontal_size, 1)
+    )
+    # Apply morphology operations
+    horizontal = cv2.erode(horizontal, horizontal_structure)
+    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
+    horizontal = cv2.erode(horizontal, horizontal_structure)
+    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
+    horizontal = cv2.bitwise_not(horizontal)
+    return horizontal
 
 
 def get_y_axis_histogram(image):
@@ -323,152 +353,9 @@ def fill_gaps_in_bp_array(array_with_gaps):
     return bp_at_pixel
 
 
-def get_bps_at_y_pixel_values(image, thresh: float = 0.7):
-    """Gets the bp at the particular y pixel value.
-
-    Parameters:
-        image:
-            A sliding window PIL image.
-    """
-    temp = image.copy()
-    y_axis_hist = get_y_axis_histogram(temp)
-    thresholded_array = np.array([1 if x > thresh else 0 for x in y_axis_hist])
-
-    bp_at_pixel = assign_bp_to_array_vals(thresholded_array)
-    interpolated_bps_at_pixel = fill_gaps_in_bp_array(bp_at_pixel)
-
-    return interpolated_bps_at_pixel
-
-
-def predict_blood_pressure_from_coordinates(coordinates: tuple):
-    """Predicts the blood pressure from the coordinates of a bounding box.
-
-    Parameters:
-        coordinates - the pixel coordinates of the middle of the bounding box.
-
-    Returns: The predicted blood pressure of the coordinates.
-    """
-    bps = get_bps_at_y_pixel_values(temp)
-    bps = [0] * int((height - thirty.ymax)) + list(
-        bps
-    )  # offset for pixels above the "200" marker.
-    y_value = int(coordinates[3])
-    return bps[y_value]
-
-
-def get_blood_pressure_matrix(image, window_size: float = 0.6, stride: float = 0.1):
-    """Predicts the blood pressure values from an image.
-
-    Parameters:
-        image:
-            A PIL image with the blood pressure section.
-
-    Returns:
-        An array with the blood pressure values from left to right.
-    """
-    width, height = image.size
-    window = [0, 0, int(width * window_size), height]
-    prediction_matrix = []
-    while window[2] < width:
-        bps = get_bps_at_y_pixel_values(image.crop(window).convert("L"))
-        new_values = [bps] * int(width * stride)
-        prediction_matrix.append(new_values)
-        window[2] += width * stride
-        window[0] += width * stride
-
-    prediction_matrix = [i for j in prediction_matrix for i in j]
-    # fill the remaining space
-    prediction_matrix = prediction_matrix + [prediction_matrix[-1]] * int(
-        width - len(prediction_matrix)
-    )
-    return prediction_matrix
-
-
-def binarized_horizontal_lines(img):
-    """Binarizes an image and removes everything except horizontal lines.
-
-    Parameters:
-        img - the image to binarize and remove all non-horizontal lines from.
-
-    Returns: A version of the image that is binarized and has only horizontal lines.
-    """
-    cv2_img = np.array(img)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    # convert to greyscale
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    # greyscale to binary
-    gray = cv2.bitwise_not(gray)
-    binarized = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
-    )
-
-    horizontal = np.copy(binarized)
-    # Specify size on horizontal axis
-    cols = horizontal.shape[1]
-    horizontal_size = cols // 30
-    # Create structure element for extracting horizontal lines through morphology operations
-    horizontal_structure = cv2.getStructuringElement(
-        cv2.MORPH_RECT, (horizontal_size, 1)
-    )
-    # Apply morphology operations
-    horizontal = cv2.erode(horizontal, horizontal_structure)
-    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=4)
-    color_converted = cv2.cvtColor(horizontal, cv2.COLOR_BGR2RGB)
-    horizontal = Image.fromarray(color_converted)
-    return horizontal
-
-
-def bp_matrix_to_np_arrays(bp_matrix):
-    """Converts the bp matrix to a 2d numpy array."""
-    ret_arr = []
-    for i in bp_matrix:
-        next_line = []
-        for j in i:
-            next_line.append(j)
-        ret_arr.append(np.array(next_line))
-    return np.array(ret_arr)
-
-
-def compute_center(row, height):
-    """Computes the center of a row given the height of the image."""
-    ymin = height - row.ymin
-    ymax = height - row.ymax
-    xmin, xmax = row.xmin, row.xmax
-    return (int(xmax - ((xmax - xmin) / 2)), int(ymin - ((ymin - ymax) / 2)))
-
-
-def filter_duplicate_detections(detections):
-    """Makes sure there are only one detection per type for each timestamp.
-
-    This method finds whether there are two or more detections for one timestamp of a
-    particular type, then removes all but the highest confidence detection.
-
-    Parameters:
-        detections - The detections dataframe.
-
-    Returns: A reduced dataframe with likely erroneous detections removed.
-    """
-    systolics = detections[detections["name"] == "systolic"].copy()
-    diastolics = detections[detections["name"] == "diastolic"].copy()
-
-    systolics = filter_duplicate_detections_for_one_bp_type(systolics)
-    diastolics = filter_duplicate_detections_for_one_bp_type(diastolics)
-
-    return pd.concat([systolics, diastolics])
-
-
-def filter_duplicate_detections_for_one_bp_type(detections):
-    """Helper function for filter_duplicate_detections()."""
-    bps = detections.copy()
-    ix_to_remove = []
-    for timestamp in list(bps["predicted_timestamp_mins"].unique()):
-        temp = bps[bps["predicted_timestamp_mins"] == timestamp]
-        if len(temp) == 1:
-            continue
-        temp = temp.sort_values("confidence", ascending=False)
-        for index in temp.index[1:]:
-            ix_to_remove.append(index)
-    return bps[~(bps.index.isin(ix_to_remove))]
+###############################################################################
+# Timestamps
+###############################################################################
 
 
 def find_timestamp_for_bboxes(
