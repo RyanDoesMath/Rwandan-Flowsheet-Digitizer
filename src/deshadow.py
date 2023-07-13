@@ -1,15 +1,16 @@
 """The deshadow module provides a function for deshadowing and normalizing and image."""
 
 from cv2 import (
-    dilate, 
-    medianBlur, 
-    absdiff, 
-    normalize, 
+    dilate,
+    medianBlur,
+    absdiff,
+    normalize,
     cvtColor,
     bitwise_not,
-    NORM_MINMAX, 
+    fastNlMeansDenoising,
+    NORM_MINMAX,
     CV_8UC1,
-    COLOR_BGR2RGB
+    COLOR_BGR2RGB,
 )
 from PIL import Image
 import numpy as np
@@ -19,7 +20,7 @@ def deshadow_and_normalize_image(image):
     """Removes shadows from an image and normalizes it.
 
     Args:
-        image:np.ndarray - a pil image.
+        image - a pil image.
 
     Returns: A deshadowed, normalized pil image.
     """
@@ -38,6 +39,22 @@ def deshadow_and_normalize_image(image):
     )
     norm_img = cv2_to_pil(norm_img)
     return norm_img
+
+
+def denoise_image(image):
+    """Denoises a PIL image using the cv2 function fastNLMeansDenoising.
+
+    Args :
+        image - a PIL image.
+
+    Returns : a Denoised PIL image.
+    """
+    img = image.copy()
+    # probably will have to check if its greyscale or not before doing this...
+    img = pil_to_cv2(img)
+    img = fastNlMeansDenoising(img, h=75, templateWindowSize=7, searchWindowSize=21)
+    return img
+
 
 def cv2_to_pil(cv2_image):
     """Converts a cv2 image to a PIL image."""

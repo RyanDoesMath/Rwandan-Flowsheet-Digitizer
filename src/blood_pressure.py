@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from ultralytics import YOLO
 import tiles
+import deshadow
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
@@ -42,6 +43,7 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
+    image = preprocess_image(image)
     image = crop_legend_out(image)
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
@@ -59,13 +61,26 @@ def extract_blood_pressure(image) -> dict:
         stride=1 / 2,
         overlap_tolerance=0.5,
     )
-    print(systolic_pred, diastolic_pred)
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
+
+
+def preprocess_image(image):
+    """Deshadows, normalizes, and denoises a PIL image.
+
+    Args:
+        image - a PIL image.
+
+    Returns : a deshadowed, normalized, denoised PIL image.
+    """
+    img = image.copy()
+    img = deshadow.deshadow_and_normalize_image(img)
+    img = deshadow.denoise_image(img)
+    return img
 
 
 def crop_legend_out(image):
