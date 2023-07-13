@@ -295,13 +295,38 @@ def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
     and 1 indicates a line that demarkates where 10 mmHg have changed, that is
     the location of the horizontal lines that encode blood pressure.
 
+    Uses a binary search for thresholds for performance.
+
     Args :
         bp_hist - the binarized histogram of the BP image with horizontal lines
         extracted.
 
     Returns : An array of 0s and 1s with proposed locations for the lines.
     """
-    max_value = max(bp_hist)
+    num_of_lines_on_sheet = 18
+    high_threshold = max(bp_hist)
+    low_threshold = 0
+    threshold = (high_threshold + low_threshold) // 2
+    threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
+    number_of_contiguous_array_sections = len(
+        get_contiguous_array_sections(threshed_hist)
+    )
+    iters = 0
+    while number_of_contiguous_array_sections != num_of_lines_on_sheet:
+        if number_of_contiguous_array_sections < num_of_lines_on_sheet:
+            high_threshold = threshold
+        if number_of_contiguous_array_sections > num_of_lines_on_sheet:
+            low_threshold = threshold
+        threshold = (high_threshold + low_threshold) // 2
+        threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
+        number_of_contiguous_array_sections = len(
+            get_contiguous_array_sections(threshed_hist)
+        )
+        if iters == 50:
+            warnings.warn("Could not find value of threshold for 18 bp lines.")
+            break
+        iters += 1
+    return threshed_hist
 
 
 def get_contiguous_array_sections(array: np.array) -> List[Tuple[Tuple[int], np.array]]:
