@@ -304,13 +304,43 @@ def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
     max_value = max(bp_hist)
 
 
-def get_contiguous_array_sections(array: np.array) -> List[Tuple(Tuple[int], np.array)]:
+def get_contiguous_array_sections(array: np.array) -> List[Tuple[Tuple[int], np.array]]:
     """Gets the contigious sections of an array where 0 is considered a break.
     Args :
         array - the numpy array to get the contiguous sections of.
 
     Returns : A list of tuples containg ((start index, end index), values).
     """
+    if len(array) == 0:
+        return []
+
+    contiguous_array_sections = []
+    accumulated_section = []
+    prev_val = array[0]
+    if prev_val != 0:
+        accumulated_section.append(array[0])
+        section_start_index = 0
+
+    for index, val in enumerate(array):
+        if index == 0:
+            continue
+        if val == 0 and prev_val != 0:
+            contiguous_array_sections.append(
+                [(section_start_index, index), accumulated_section]
+            )
+            accumulated_section = []
+        elif val != 0 and prev_val == 0:
+            section_start_index = index
+            accumulated_section.append(val)
+        elif val != 0 and prev_val != 0:
+            accumulated_section.append(val)
+        prev_val = val
+    if len(accumulated_section) > 0:
+        contiguous_array_sections.append(
+            [(section_start_index, len(array)), accumulated_section]
+        )
+
+    return [(tup, np.array(x)) for (tup, x) in contiguous_array_sections]
 
 
 def correct_array_of_bp_lines(bp_lines: np.array) -> np.array:
