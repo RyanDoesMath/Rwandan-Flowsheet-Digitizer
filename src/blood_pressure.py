@@ -301,6 +301,16 @@ def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
 
     Returns : An array of 0s and 1s with proposed locations for the lines.
     """
+    max_value = max(bp_hist)
+
+
+def get_contiguous_array_sections(array: np.array) -> List[Tuple(Tuple[int], np.array)]:
+    """Gets the contigious sections of an array where 0 is considered a break.
+    Args :
+        array - the numpy array to get the contiguous sections of.
+
+    Returns : A list of tuples containg ((start index, end index), values).
+    """
 
 
 def correct_array_of_bp_lines(bp_lines: np.array) -> np.array:
