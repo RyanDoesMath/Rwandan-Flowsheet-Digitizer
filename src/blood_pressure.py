@@ -519,14 +519,15 @@ def filter_non_matches(
     Returns : a tuple with the distances matrix sans the non-matches and the
               non-matches as BloodPressure structs.
     """
-    no_systolic_detections = len(dists) == 0
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections and no_diastolic_detections:
+        return ([], [])
     if no_systolic_detections:
         return (
             dists,
             [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
         )
-
-    no_diastolic_detections = len(dists[0]) == 0
     if no_diastolic_detections:
         return (
             dists,
@@ -588,6 +589,10 @@ def generate_matches(
 
     Returns : A list of BloodPressure structs.
     """
+    no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
+    no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
+    if no_systolic_detections or no_diastolic_detections:
+        return []
 
     matches = []
     while len(dists) > 0:

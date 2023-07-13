@@ -214,7 +214,8 @@ class TestTimestampImputation(unittest.TestCase):
         self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [])
 
     def test_filter_non_matches_standard(self):
-        """Tests the filter_non_matches function with the standard case."""
+        """Tests the filter_non_matches function with the standard case where there
+        is at least one non-match."""
         dist_input = [[0], [1]]
         bp_bounding_boxes_input = {
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
@@ -266,6 +267,42 @@ class TestTimestampImputation(unittest.TestCase):
         self.assertEqual(
             blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
             ([], []),
+        )
+
+    def test_filter_non_matches_no_systolic(self):
+        """Tests the filter_non_matches function with no systolic boxes."""
+        dist_input = []
+        bp_bounding_boxes_input = {
+            "systolic": [],
+            "diastolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+        }
+        self.assertEqual(
+            blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
+            (
+                [],
+                [
+                    blood_pressure.BloodPressure(diastolic_box=[0, 0, 1, 1]),
+                    blood_pressure.BloodPressure(diastolic_box=[1, 0, 2, 1]),
+                ],
+            ),
+        )
+
+    def test_filter_non_matches_no_diastolic(self):
+        """Tests the filter_non_matches function with no diastolic boxes."""
+        dist_input = [[], []]
+        bp_bounding_boxes_input = {
+            "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
+            "diastolic": [],
+        }
+        self.assertEqual(
+            blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
+            (
+                [],
+                [
+                    blood_pressure.BloodPressure(systolic_box=[0, 0, 1, 1]),
+                    blood_pressure.BloodPressure(systolic_box=[1, 0, 2, 1]),
+                ],
+            ),
         )
 
     def test_timestamp_blood_pressures_standard(self):
