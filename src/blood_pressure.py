@@ -42,6 +42,7 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
+    image = preprocess_image(image)
     image = crop_legend_out(image)
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
@@ -66,6 +67,16 @@ def extract_blood_pressure(image) -> dict:
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
     bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
+
+
+def preprocess_image(image):
+    """Deshadows, normalizes, and denoises a PIL image.
+
+    Args:
+        image - a PIL image.
+
+    Returns : a deshadowed, normalized, denoised PIL image.
+    """
 
 
 def crop_legend_out(image):
