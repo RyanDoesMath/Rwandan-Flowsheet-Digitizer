@@ -488,12 +488,6 @@ def generate_x_dists_matrix(
 
     Returns : A matrix systolic rows, diastolic columns, and distances as entries.
     """
-    if (
-        len(bp_bounding_boxes["systolic"]) == 0
-        or len(bp_bounding_boxes["diastolic"]) == 0
-    ):
-        return []
-
     dists = []
     systolic_centers = [
         box[2] - (box[2] - box[0]) / 2 for box in bp_bounding_boxes["systolic"]
@@ -512,7 +506,10 @@ def generate_x_dists_matrix(
 def filter_non_matches(
     dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
 ) -> Tuple[List[List[float]], List[BloodPressure]]:
-    """
+    """If there are more systolic than diastolic boxes (or vice versa), this
+    method will find the systolic box which is the furthest x-distance from a
+    matching diastolic box, then remove it and create a BloodPressure struct
+    with None for the diastolic box.
 
     Args :
         bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
@@ -522,8 +519,19 @@ def filter_non_matches(
     Returns : a tuple with the distances matrix sans the non-matches and the
               non-matches as BloodPressure structs.
     """
-    if len(dists) == 0:
-        return ([], [])
+    no_systolic_detections = len(dists) == 0
+    if no_systolic_detections:
+        return (
+            dists,
+            [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
+        )
+
+    no_diastolic_detections = len(dists[0]) == 0
+    if no_diastolic_detections:
+        return (
+            dists,
+            [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
+        )
     dists_was_tranposed = False
     num_rows = len(dists)
     num_columns = len(dists[0])
@@ -604,8 +612,7 @@ def get_index_of_list_with_smallest_min_val(dists: List[List[float]]) -> int:
     try:
         list_with_smallest_minimum = sorted(dists, key=min)[0]
         return dists.index(list_with_smallest_minimum)
-    except IndexError as err:
-        print(err)
+    except IndexError as _:
         warnings.warn(
             "Empty list passed into get_index_of_list_with_smallest_min_val()."
         )
@@ -616,8 +623,7 @@ def get_index_of_smallest_val(row: List[float]) -> int:
     """Gets the index of the smallest value in a list."""
     try:
         return row.index(min(row))
-    except ValueError as err:
-        print(err)
+    except ValueError as _:
         warnings.warn("Empty list passed into get_index_of_smallest_val().")
         return None
 

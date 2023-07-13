@@ -4,10 +4,65 @@ import sys
 sys.path.append("src")
 import unittest
 import blood_pressure
+import warnings
 
 
 class TestTimestampImputation(unittest.TestCase):
     """Tests the imputation of timestamps."""
+
+    def test_find_timestamp_for_bboxes_standard(self):
+        """Tests the find_timestamp_for_bboxes function."""
+        fn_input = {
+            "systolic": [[0, 0, 1, 1], [2, 0, 3, 1], [1, 0, 2, 1]],
+            "diastolic": [[0, 1, 1, 2], [2, 1, 3, 2], [1, 1, 2, 2]],
+        }
+        true_output = [
+            blood_pressure.BloodPressure(
+                systolic_box=[0, 0, 1, 1], diastolic_box=[0, 1, 1, 2], timestamp=0
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[1, 0, 2, 1], diastolic_box=[1, 1, 2, 2], timestamp=5
+            ),
+            blood_pressure.BloodPressure(
+                systolic_box=[2, 0, 3, 1], diastolic_box=[2, 1, 3, 2], timestamp=10
+            ),
+        ]
+        fn_output = blood_pressure.find_timestamp_for_bboxes(fn_input)
+        self.assertEqual(fn_output, true_output)
+
+    def test_find_timestamp_for_bboxes_empty_systolic_and_diastolic(self):
+        """Tests the find_timestamp_for_bboxes function with an empty
+        systolic boxes list and then an empty diastolic boxes list."""
+        fn_input = {
+            "systolic": [],
+            "diastolic": [[0, 1, 1, 2], [2, 1, 3, 2], [1, 1, 2, 2]],
+        }
+        true_output = [
+            blood_pressure.BloodPressure(diastolic_box=[0, 1, 1, 2], timestamp=0),
+            blood_pressure.BloodPressure(diastolic_box=[1, 1, 2, 2], timestamp=5),
+            blood_pressure.BloodPressure(diastolic_box=[2, 1, 3, 2], timestamp=10),
+        ]
+        fn_output = blood_pressure.find_timestamp_for_bboxes(fn_input)
+        print(fn_output)
+        print()
+        print(true_output)
+        self.assertEqual(fn_output, true_output)
+
+        fn_input = {
+            "systolic": [[0, 0, 1, 1], [2, 0, 3, 1], [1, 0, 2, 1]],
+            "diastolic": [],
+        }
+        true_output = [
+            blood_pressure.BloodPressure(systolic_box=[0, 0, 1, 1], timestamp=0),
+            blood_pressure.BloodPressure(systolic_box=[1, 0, 2, 1], timestamp=5),
+            blood_pressure.BloodPressure(systolic_box=[2, 0, 3, 1], timestamp=10),
+        ]
+        fn_output = blood_pressure.find_timestamp_for_bboxes(fn_input)
+        self.assertEqual(fn_output, true_output)
+
+    def test_find_timestamp_for_bboxes_empty_list(self):
+        """Tests the find_timestamp_for_bboxes function with empty
+        systolic and diastolic BP lists."""
 
     def test_transpose_dists_empty_list(self):
         """Tests transpose_dists with an empty list."""
@@ -97,10 +152,12 @@ class TestTimestampImputation(unittest.TestCase):
     def test_get_index_of_list_with_smallest_min_val_empty_list(self):
         """Tests the get_index_of_list_with_smallest_min_val function with
         an empty list as input."""
+        warnings.filterwarnings("ignore")
         fn_input = []
         self.assertEqual(
             blood_pressure.get_index_of_list_with_smallest_min_val(fn_input), None
         )
+        warnings.filterwarnings("default")
 
     def test_get_index_of_smallest_val_standard(self):
         """Tests the get_index_of_smallest_val function."""
@@ -111,7 +168,9 @@ class TestTimestampImputation(unittest.TestCase):
 
     def test_get_index_of_smallest_val_empty_list(self):
         """Tests the get_index_of_smallest_val function with an empty list."""
+        warnings.filterwarnings("ignore")
         self.assertEqual(blood_pressure.get_index_of_smallest_val([]), None)
+        warnings.filterwarnings("default")
 
     def test_generate_x_dists_matrix(self):
         """Tests the generate_x_dists_matrix function."""
@@ -143,6 +202,14 @@ class TestTimestampImputation(unittest.TestCase):
         fn_input = {
             "systolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
             "diastolic": [],
+        }
+        self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [[], []])
+
+    def test_generate_x_dists_matrix_no_systolic(self):
+        """Tests the generate_x_dists_matrix function with no systolic boxes."""
+        fn_input = {
+            "systolic": [],
+            "diastolic": [[0, 0, 1, 1], [1, 0, 2, 1]],
         }
         self.assertEqual(blood_pressure.generate_x_dists_matrix(fn_input), [])
 
