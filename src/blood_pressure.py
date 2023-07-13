@@ -219,6 +219,7 @@ def find_bp_value_for_bbox(
         A list of predicted values to put into a column of the dataframe.
     """
     horizontal_lines = extract_horizontal_lines(image)
+    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(image)
 
 
 def extract_horizontal_lines(image):
@@ -252,14 +253,24 @@ def extract_horizontal_lines(image):
     return horizontal
 
 
+def get_bp_values_for_all_y_pixels(image):
+    """Finds the BP values associated with all y-pixels in the image.
+
+    Args :
+        image - A PIL image of the BP section with the legend cropped out.
+
+    Returns : a list with a BP value for every y-pixel.
+    """
+
+
 def get_y_axis_histogram(image):
     """Generates a normalized pixel histogram for all y values.
 
     EX:
     |-----|      |-----|
-    |  *  |  ->  |*    |  ->             ->
-    | * * |  ->  |**   |  ->  [1, 2, 2]  ->  [0.5, 1, 1]
-    |*   *|  ->  |**   |  ->             ->
+    |  *  |  ->  |*    |                 ->
+    | * * |  ->  |**   |  =   [1, 2, 2]  ->  [0.5, 1, 1]
+    |*   *|  ->  |**   |                 ->
     |-----|      |-----|
 
     Parameters:
