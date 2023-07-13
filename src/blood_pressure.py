@@ -79,7 +79,9 @@ def preprocess_image(image):
     Returns : a deshadowed, normalized, denoised PIL image.
     """
     img = image.copy()
-    img = 
+    img = deshadow.deshadow_and_normalize_image(img)
+    img = deshadow.denoise_image(img)
+    return img
 
 
 def crop_legend_out(image):
