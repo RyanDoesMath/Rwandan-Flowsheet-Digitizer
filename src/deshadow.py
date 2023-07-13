@@ -50,6 +50,7 @@ def denoise_image(image):
     Returns : a Denoised PIL image.
     """
     img = image.copy()
+    # probably will have to check if its greyscale or not before doing this...
     img = pil_to_cv2(img)
     img = fastNlMeansDenoising(img, h=75, templateWindowSize=7, searchWindowSize=21)
     return img
