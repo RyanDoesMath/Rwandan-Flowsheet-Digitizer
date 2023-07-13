@@ -43,9 +43,6 @@ class TestTimestampImputation(unittest.TestCase):
             blood_pressure.BloodPressure(diastolic_box=[2, 1, 3, 2], timestamp=10),
         ]
         fn_output = blood_pressure.find_timestamp_for_bboxes(fn_input)
-        print(fn_output)
-        print()
-        print(true_output)
         self.assertEqual(fn_output, true_output)
 
         fn_input = {
@@ -297,7 +294,7 @@ class TestTimestampImputation(unittest.TestCase):
         self.assertEqual(
             blood_pressure.filter_non_matches(dist_input, bp_bounding_boxes_input),
             (
-                [],
+                [[], []],
                 [
                     blood_pressure.BloodPressure(systolic_box=[0, 0, 1, 1]),
                     blood_pressure.BloodPressure(systolic_box=[1, 0, 2, 1]),
