@@ -218,6 +218,7 @@ def find_bp_value_for_bbox(
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
+    horizontal_lines = extract_horizontal_lines(image)
 
 
 def extract_horizontal_lines(image):
