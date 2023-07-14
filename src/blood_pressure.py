@@ -6,7 +6,6 @@ from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
-import pandas as pd
 import numpy as np
 from ultralytics import YOLO
 import tiles
