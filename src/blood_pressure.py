@@ -59,7 +59,7 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
 
     Returns : A tuple with systolic_boxes, distolic_boxes
     """
-    img = crop_legend_out(image)
+    img = image.copy()
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
         img,
