@@ -295,6 +295,7 @@ def get_y_axis_histogram(image):
         A normalized pixel histogram of x axis values cast to the y axis.
     """
     image = deshadow.cv2_to_pil(image)
+    image = image.convert("L")
     y_axis_hist = np.sum(np.array(image) / 255, axis=1)
     return y_axis_hist
 
