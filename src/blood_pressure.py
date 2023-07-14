@@ -717,7 +717,8 @@ def show_detections(image):
         rows=BP_TILE_DATA["ROWS"],
         columns=BP_TILE_DATA["COLUMNS"],
         stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.3,
+        remove_non_square=True,
     )
     diastolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
@@ -725,7 +726,8 @@ def show_detections(image):
         rows=BP_TILE_DATA["ROWS"],
         columns=BP_TILE_DATA["COLUMNS"],
         stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.3,
+        remove_non_square=True,
     )
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
     img = image.copy()
