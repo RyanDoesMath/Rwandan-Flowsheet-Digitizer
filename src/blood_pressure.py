@@ -218,7 +218,7 @@ def find_bp_value_for_bbox(
     """
 
     def compute_box_y_center(box: List[float]):
-        return box[3] + (box[3] - box[1])
+        return int(round(box[3] + (box[3] - box[1]), 0))
 
     horizontal_lines = extract_horizontal_lines(image)
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
