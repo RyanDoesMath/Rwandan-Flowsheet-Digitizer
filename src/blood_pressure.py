@@ -294,7 +294,8 @@ def get_bp_values_for_all_y_pixels(image):
 
     Returns : a list with a BP value for every y-pixel.
     """
-    y_hist = get_y_axis_histogram(image)
+    img = crop_legend_out(image)
+    y_hist = get_y_axis_histogram(img)
     proposed_bp_lines = propose_array_of_bp_lines(y_hist)
     bp_lines = correct_array_of_bp_lines(proposed_bp_lines)
     bp_array = apply_bp_values_to_lines(bp_lines)
