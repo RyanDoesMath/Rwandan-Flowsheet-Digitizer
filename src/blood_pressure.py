@@ -711,10 +711,26 @@ def timestamp_blood_pressures(
 
 def show_detections(image):
     """Draws the bp detections on the image."""
-    extractions = extract_blood_pressure(image)
+    systolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image,
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.5,
+    )
+    diastolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.5,
+    )
     img = crop_legend_out(image)
     draw = ImageDraw.Draw(img)
-    for _, det in extractions.iterrows():
-        box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
-        draw.rectangle(box, outline="red")
+    for box in systolic_pred:
+        draw.rectangle(box[:4], outline="#232D4B")
+    for box in diastolic_pred:
+        draw.rectangle(box[:4], outline="#E57200")
     return img
