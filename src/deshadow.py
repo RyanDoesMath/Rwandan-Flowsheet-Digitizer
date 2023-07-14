@@ -53,6 +53,7 @@ def denoise_image(image):
     # probably will have to check if its greyscale or not before doing this...
     img = pil_to_cv2(img)
     img = fastNlMeansDenoising(img, h=75, templateWindowSize=7, searchWindowSize=21)
+    img = cv2_to_pil(img)
     return img
 
 

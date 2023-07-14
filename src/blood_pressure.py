@@ -65,7 +65,7 @@ def extract_blood_pressure(image) -> dict:
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    bp_pred = filter_duplicate_detections(bp_pred)
+    # bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
 
 
@@ -96,6 +96,7 @@ def crop_legend_out(image):
 
     Returns : a cropped version of the image with only the BP graph.
     """
+    print(image.size, type(image))
     width, _ = image.size
     box_and_class = make_legend_predictions(image)
 
