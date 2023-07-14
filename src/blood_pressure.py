@@ -725,6 +725,7 @@ def timestamp_blood_pressures(
 def show_detections(image):
     """Draws the bp detections on the image."""
     img = image.copy()
+    img = preprocess_image(img)
     img_no_legend = crop_legend_out(img)
     systolic_pred, diastolic_pred = make_detections(img)
     draw = ImageDraw.Draw(img_no_legend)
