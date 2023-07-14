@@ -11,7 +11,7 @@ from ultralytics import YOLO
 import tiles
 import deshadow
 
-BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8m_retrain.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
 
 
