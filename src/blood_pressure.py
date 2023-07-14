@@ -78,7 +78,7 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
         overlap_tolerance=0.3,
         remove_non_square=True,
     )
-    im_height = image.size[1]
+    im_height = img.size[1]
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, im_height)
     return systolic_pred, diastolic_pred
 
