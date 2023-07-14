@@ -79,7 +79,7 @@ def preprocess_image(image):
     """
     img = image.copy()
     img = deshadow.deshadow_and_normalize_image(img)
-    img = deshadow.denoise_image(img)
+    # img = deshadow.denoise_image(img)
     return img
 
 
