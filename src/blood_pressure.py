@@ -63,8 +63,8 @@ def extract_blood_pressure(image) -> dict:
     )
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
-    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
-    bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
+    bp_pred = find_timestamp_for_bboxes(bp_pred)
+    bp_pred = find_bp_value_for_bbox(image, bp_pred)
     return bp_pred
 
 
