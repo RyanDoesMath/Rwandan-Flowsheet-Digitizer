@@ -733,7 +733,7 @@ def show_detections(image):
     img = image.copy()
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
-        draw.rectangle(box[:4], outline="#232D4B")
+        draw.rectangle(box[:4], outline="#fbb584")
     for box in diastolic_pred:
-        draw.rectangle(box[:4], outline="#E57200")
+        draw.rectangle(box[:4], outline="#6c799c")
     return img
