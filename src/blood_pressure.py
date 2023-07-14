@@ -44,30 +44,43 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     image = preprocess_image(image)
-    image = crop_legend_out(image)
-    systolic_pred = tiles.tile_predict(
-        BLOOD_PRESSURE_MODEL,
-        image,
-        rows=BP_TILE_DATA["ROWS"],
-        columns=BP_TILE_DATA["COLUMNS"],
-        stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
-    )
-    diastolic_pred = tiles.tile_predict(
-        BLOOD_PRESSURE_MODEL,
-        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
-        rows=BP_TILE_DATA["ROWS"],
-        columns=BP_TILE_DATA["COLUMNS"],
-        stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
-    )
-    print("sys_pred", systolic_pred)
-    print("dia_pred", diastolic_pred)
-    diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
+    systolic_pred, diastolic_pred = make_detections(image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred)
     bp_pred = find_bp_value_for_bbox(image, bp_pred)
     return bp_pred
+
+
+def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
+    """Makes detections using the tile_predict method.
+
+    Args :
+        image - a PIL image that has been deshadowed and normalized.
+
+    Returns : A tuple with systolic_boxes, distolic_boxes
+    """
+    img = crop_legend_out(image)
+    systolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        img,
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.3,
+        remove_non_square=True,
+    )
+    diastolic_pred = tiles.tile_predict(
+        BLOOD_PRESSURE_MODEL,
+        img.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.3,
+        remove_non_square=True,
+    )
+    im_height = image.size[1]
+    diastolic_pred = adjust_diastolic_preds(diastolic_pred, im_height)
+    return systolic_pred, diastolic_pred
 
 
 def preprocess_image(image):
@@ -711,26 +724,8 @@ def timestamp_blood_pressures(
 
 def show_detections(image):
     """Draws the bp detections on the image."""
-    img = crop_legend_out(image)
-    systolic_pred = tiles.tile_predict(
-        BLOOD_PRESSURE_MODEL,
-        img,
-        rows=BP_TILE_DATA["ROWS"],
-        columns=BP_TILE_DATA["COLUMNS"],
-        stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.3,
-        remove_non_square=True,
-    )
-    diastolic_pred = tiles.tile_predict(
-        BLOOD_PRESSURE_MODEL,
-        img.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
-        rows=BP_TILE_DATA["ROWS"],
-        columns=BP_TILE_DATA["COLUMNS"],
-        stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.3,
-        remove_non_square=True,
-    )
-    diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
+    img = image.copy()
+    systolic_pred, diastolic_pred = make_detections(img)
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
         draw.rectangle(box[:4], outline="#fbb584")
