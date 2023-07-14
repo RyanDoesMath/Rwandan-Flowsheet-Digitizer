@@ -13,6 +13,7 @@ import deshadow
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8m_retrain.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
+BP_TILE_DATA = {"ROWS": 6, "COLUMNS": 17, "STRIDE": 1 / 2}
 
 
 @dataclass
@@ -47,17 +48,17 @@ def extract_blood_pressure(image) -> dict:
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
         image,
-        rows=4,
-        columns=10,
-        stride=1 / 2,
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
         overlap_tolerance=0.5,
     )
     diastolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
         image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
-        rows=4,
-        columns=10,
-        stride=1 / 2,
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
         overlap_tolerance=0.5,
     )
     print("sys_pred", systolic_pred)
