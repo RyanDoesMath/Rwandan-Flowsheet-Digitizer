@@ -94,7 +94,6 @@ def crop_legend_out(image):
 
     Returns : a cropped version of the image with only the BP graph.
     """
-    print(image.size, type(image))
     width, _ = image.size
     box_and_class = make_legend_predictions(image)
 
@@ -224,10 +223,20 @@ def find_bp_value_for_bbox(
     horizontal_lines = extract_horizontal_lines(image)
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
-        blood_pressure_sys_center = compute_box_y_center(blood_pressure.systolic_box)
-        blood_pressure_dia_center = compute_box_y_center(blood_pressure.diastolic_box)
-        blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
-        blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
+        has_systolic = blood_pressure.systolic_box is not None
+        has_diastolic = blood_pressure.diastolic_box is not None
+        if has_systolic:
+            blood_pressure_sys_center = compute_box_y_center(
+                blood_pressure.systolic_box
+            )
+            blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
+        if has_diastolic:
+            blood_pressure_dia_center = compute_box_y_center(
+                blood_pressure.diastolic_box
+            )
+            blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
+        if not has_systolic and not has_diastolic:
+            warnings.warn("Box has no systolic or distolic prediction.")
     return blood_pressure_predictions
 
 
