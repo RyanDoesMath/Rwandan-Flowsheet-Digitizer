@@ -65,7 +65,6 @@ def extract_blood_pressure(image) -> dict:
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
     bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    # bp_pred = filter_duplicate_detections(bp_pred)
     return bp_pred
 
 
@@ -79,7 +78,6 @@ def preprocess_image(image):
     """
     img = image.copy()
     img = deshadow.deshadow_and_normalize_image(img)
-    # img = deshadow.denoise_image(img)
     return img
 
 
@@ -242,8 +240,8 @@ def extract_horizontal_lines(image):
     Returns: A PIL image that is binarized and has only horizontal lines.
     """
     cv2_img = deshadow.pil_to_cv2(image)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    gray = cv2.bitwise_not(cv2_img)
+    grey = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bitwise_not(grey)
     black_and_white = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
     )
