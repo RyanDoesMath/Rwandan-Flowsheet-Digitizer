@@ -726,11 +726,10 @@ def show_detections(image):
     """Draws the bp detections on the image."""
     img = image.copy()
     img = preprocess_image(img)
-    img_no_legend = crop_legend_out(img)
     systolic_pred, diastolic_pred = make_detections(img)
-    draw = ImageDraw.Draw(img_no_legend)
+    draw = ImageDraw.Draw(img)
     for box in systolic_pred:
         draw.rectangle(box[:4], outline="#fbb584")
     for box in diastolic_pred:
         draw.rectangle(box[:4], outline="#6c799c")
-    return img_no_legend
+    return img
