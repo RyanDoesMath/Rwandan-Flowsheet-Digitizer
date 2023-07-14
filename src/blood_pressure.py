@@ -727,6 +727,7 @@ def show_detections(image):
         stride=BP_TILE_DATA["STRIDE"],
         overlap_tolerance=0.5,
     )
+    diastolic_pred = adjust_diastolic_preds(diastolic_pred)
     img = image.copy()
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
