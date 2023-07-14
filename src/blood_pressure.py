@@ -727,7 +727,7 @@ def show_detections(image):
         stride=BP_TILE_DATA["STRIDE"],
         overlap_tolerance=0.5,
     )
-    img = crop_legend_out(image)
+    img = image.copy()
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
         draw.rectangle(box[:4], outline="#232D4B")
