@@ -218,8 +218,18 @@ def find_bp_value_for_bbox(
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
+
+    def compute_box_y_center(box: List[float]):
+        return box[3] + (box[3] - box[1])
+
     horizontal_lines = extract_horizontal_lines(image)
-    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(image)
+    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
+    for blood_pressure in blood_pressure_predictions:
+        blood_pressure_sys_center = compute_box_y_center(blood_pressure.systolic_box)
+        blood_pressure_dia_center = compute_box_y_center(blood_pressure.diastolic_box)
+        blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
+        blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
+    return blood_pressure_predictions
 
 
 def extract_horizontal_lines(image):
@@ -378,6 +388,7 @@ def correct_array_of_bp_lines(bp_lines: np.array) -> np.array:
 
     Returns : A corrected array of bp_lines.
     """
+    return bp_lines
 
 
 def apply_bp_values_to_lines(bp_lines: np.array) -> np.array:
