@@ -66,7 +66,7 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
         rows=BP_TILE_DATA["ROWS"],
         columns=BP_TILE_DATA["COLUMNS"],
         stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.3,
         remove_non_square=True,
     )
     diastolic_pred = tiles.tile_predict(
@@ -75,7 +75,7 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
         rows=BP_TILE_DATA["ROWS"],
         columns=BP_TILE_DATA["COLUMNS"],
         stride=BP_TILE_DATA["STRIDE"],
-        overlap_tolerance=0.5,
+        overlap_tolerance=0.3,
         remove_non_square=True,
     )
     im_height = img.size[1]
