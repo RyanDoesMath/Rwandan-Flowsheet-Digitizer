@@ -389,6 +389,9 @@ def apply_bp_values_to_lines(bp_lines: np.array) -> np.array:
 
     Returns : An array where a BP mmHg value is associated with each item.
     """
+    skeleton_bp_array = assign_bp_to_array_vals(bp_lines)
+    full_bp_array = fill_gaps_in_bp_array(skeleton_bp_array)
+    return full_bp_array
 
 
 def assign_bp_to_array_vals(thresholded_array):
