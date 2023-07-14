@@ -6,14 +6,14 @@ from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
-import pandas as pd
 import numpy as np
 from ultralytics import YOLO
 import tiles
 import deshadow
 
-BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8m_retrain.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
+BP_TILE_DATA = {"ROWS": 6, "COLUMNS": 17, "STRIDE": 1 / 2}
 
 
 @dataclass
@@ -44,29 +44,43 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     image = preprocess_image(image)
-    image = crop_legend_out(image)
+    systolic_pred, diastolic_pred = make_detections(image)
+    bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
+    bp_pred = find_timestamp_for_bboxes(bp_pred)
+    bp_pred = find_bp_value_for_bbox(image, bp_pred)
+    return bp_pred
+
+
+def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
+    """Makes detections using the tile_predict method.
+
+    Args :
+        image - a PIL image that has been deshadowed and normalized.
+
+    Returns : A tuple with systolic_boxes, distolic_boxes
+    """
+    img = image.copy()
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
-        image,
-        rows=4,
-        columns=10,
-        stride=1 / 2,
-        overlap_tolerance=0.5,
+        img,
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.3,
+        remove_non_square=True,
     )
     diastolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
-        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
-        rows=4,
-        columns=10,
-        stride=1 / 2,
-        overlap_tolerance=0.5,
+        img.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        rows=BP_TILE_DATA["ROWS"],
+        columns=BP_TILE_DATA["COLUMNS"],
+        stride=BP_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.3,
+        remove_non_square=True,
     )
-    diastolic_pred = adjust_diastolic_preds(diastolic_pred, image.size[1])
-    bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
-    bp_pred["predicted_timestamp_mins"] = find_timestamp_for_bboxes(bp_pred)
-    bp_pred["predicted_values_mmhg"] = find_bp_value_for_bbox(image, bp_pred)
-    bp_pred = filter_duplicate_detections(bp_pred)
-    return bp_pred
+    im_height = img.size[1]
+    diastolic_pred = adjust_diastolic_preds(diastolic_pred, im_height)
+    return systolic_pred, diastolic_pred
 
 
 def preprocess_image(image):
@@ -79,7 +93,6 @@ def preprocess_image(image):
     """
     img = image.copy()
     img = deshadow.deshadow_and_normalize_image(img)
-    img = deshadow.denoise_image(img)
     return img
 
 
@@ -195,10 +208,10 @@ def bb_intersection(box_a, box_b):
 
 def adjust_diastolic_preds(preds, image_height):
     """Flips the diastolic predictions back around."""
-    temp = preds.copy()
-    temp["ymin"] = image_height - temp["ymin"]
-    temp["ymax"] = image_height - temp["ymax"]
-    return temp
+    for box in preds:
+        box[3] = image_height - box[3]
+        box[1] = image_height - box[1]
+    return preds
 
 
 ###############################################################################
@@ -218,7 +231,29 @@ def find_bp_value_for_bbox(
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
+
+    def compute_box_y_center(box: List[float]):
+        return int(round(box[3] + (box[3] - box[1]), 0))
+
+    image = crop_legend_out(image)
     horizontal_lines = extract_horizontal_lines(image)
+    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
+    for blood_pressure in blood_pressure_predictions:
+        has_systolic = blood_pressure.systolic_box is not None
+        has_diastolic = blood_pressure.diastolic_box is not None
+        if has_systolic:
+            blood_pressure_sys_center = compute_box_y_center(
+                blood_pressure.systolic_box
+            )
+            blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
+        if has_diastolic:
+            blood_pressure_dia_center = compute_box_y_center(
+                blood_pressure.diastolic_box
+            )
+            blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
+        if not has_systolic and not has_diastolic:
+            warnings.warn("Box has no systolic or distolic prediction.")
+    return blood_pressure_predictions
 
 
 def extract_horizontal_lines(image):
@@ -230,8 +265,8 @@ def extract_horizontal_lines(image):
     Returns: A PIL image that is binarized and has only horizontal lines.
     """
     cv2_img = deshadow.pil_to_cv2(image)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR)
-    gray = cv2.bitwise_not(cv2_img)
+    grey = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bitwise_not(grey)
     black_and_white = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
     )
@@ -252,14 +287,29 @@ def extract_horizontal_lines(image):
     return horizontal
 
 
+def get_bp_values_for_all_y_pixels(image):
+    """Finds the BP values associated with all y-pixels in the image.
+
+    Args :
+        image - A PIL image of the BP section with the legend cropped out.
+
+    Returns : a list with a BP value for every y-pixel.
+    """
+    y_hist = get_y_axis_histogram(image)
+    proposed_bp_lines = propose_array_of_bp_lines(y_hist)
+    bp_lines = correct_array_of_bp_lines(proposed_bp_lines)
+    bp_array = apply_bp_values_to_lines(bp_lines)
+    return bp_array
+
+
 def get_y_axis_histogram(image):
     """Generates a normalized pixel histogram for all y values.
 
     EX:
     |-----|      |-----|
-    |  *  |  ->  |*    |  ->             ->
-    | * * |  ->  |**   |  ->  [1, 2, 2]  ->  [0.5, 1, 1]
-    |*   *|  ->  |**   |  ->             ->
+    |  *  |  ->  |*    |                 ->
+    | * * |  ->  |**   |  =   [1, 2, 2]  ->  [0.5, 1, 1]
+    |*   *|  ->  |**   |                 ->
     |-----|      |-----|
 
     Parameters:
@@ -269,9 +319,115 @@ def get_y_axis_histogram(image):
     Returns:
         A normalized pixel histogram of x axis values cast to the y axis.
     """
-    grayscale_image = image.copy().convert("L")
-    y_axis_hist = np.sum(np.array(grayscale_image) / 255, axis=1)
+    image = deshadow.cv2_to_pil(image)
+    image = image.convert("L")
+    y_axis_hist = np.sum(np.array(image) / 255, axis=1)
     return y_axis_hist
+
+
+def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
+    """Proposes an array where 0 indicates space between the BP demarkations,
+    and 1 indicates a line that demarkates where 10 mmHg have changed, that is
+    the location of the horizontal lines that encode blood pressure.
+
+    Uses a binary search for thresholds for performance.
+
+    Args :
+        bp_hist - the binarized histogram of the BP image with horizontal lines
+        extracted.
+
+    Returns : An array of 0s and 1s with proposed locations for the lines.
+    """
+    num_of_lines_on_sheet = 18
+    high_threshold = max(bp_hist)
+    low_threshold = 0
+    threshold = (high_threshold + low_threshold) // 2
+    threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
+    number_of_contiguous_array_sections = len(
+        get_contiguous_array_sections(threshed_hist)
+    )
+    iters = 0
+    while number_of_contiguous_array_sections != num_of_lines_on_sheet:
+        if number_of_contiguous_array_sections < num_of_lines_on_sheet:
+            high_threshold = threshold
+        if number_of_contiguous_array_sections > num_of_lines_on_sheet:
+            low_threshold = threshold
+        threshold = (high_threshold + low_threshold) // 2
+        threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
+        number_of_contiguous_array_sections = len(
+            get_contiguous_array_sections(threshed_hist)
+        )
+        if iters == 50:
+            warnings.warn("Could not find value of threshold for 18 bp lines.")
+            break
+        iters += 1
+    return threshed_hist
+
+
+def get_contiguous_array_sections(array: np.array) -> List[Tuple[Tuple[int], np.array]]:
+    """Gets the contigious sections of an array where 0 is considered a break.
+    Args :
+        array - the numpy array to get the contiguous sections of.
+
+    Returns : A list of tuples containg ((start index, end index), values).
+    """
+    if len(array) == 0:
+        return []
+
+    contiguous_array_sections = []
+    accumulated_section = []
+    prev_val = array[0]
+    if prev_val != 0:
+        accumulated_section.append(array[0])
+        section_start_index = 0
+
+    for index, val in enumerate(array):
+        if index == 0:
+            continue
+        if val == 0 and prev_val != 0:
+            contiguous_array_sections.append(
+                [(section_start_index, index), accumulated_section]
+            )
+            accumulated_section = []
+        elif val != 0 and prev_val == 0:
+            section_start_index = index
+            accumulated_section.append(val)
+        elif val != 0 and prev_val != 0:
+            accumulated_section.append(val)
+        prev_val = val
+    if len(accumulated_section) > 0:
+        contiguous_array_sections.append(
+            [(section_start_index, len(array)), accumulated_section]
+        )
+
+    return [(tup, np.array(x)) for (tup, x) in contiguous_array_sections]
+
+
+def correct_array_of_bp_lines(bp_lines: np.array) -> np.array:
+    """Removes erroneous proposed lines, and inserts lines that track with the
+    structure of the sheet as well as a-priori analysis of where the lines
+    typically are.
+
+    Args :
+        bp_lines - a numpy array of 0s and 1s that propose locations for the bp lines.
+
+    Returns : A corrected array of bp_lines.
+    """
+    return bp_lines
+
+
+def apply_bp_values_to_lines(bp_lines: np.array) -> np.array:
+    """Applies values to the bp lines array of 1s and 0s.
+
+    Args :
+        bp_lines - the array that contains the locations of the horizontal
+                   lines on the image that denote 10 bp changes.
+
+    Returns : An array where a BP mmHg value is associated with each item.
+    """
+    skeleton_bp_array = assign_bp_to_array_vals(bp_lines)
+    full_bp_array = fill_gaps_in_bp_array(skeleton_bp_array)
+    return full_bp_array
 
 
 def assign_bp_to_array_vals(thresholded_array):
@@ -569,10 +725,12 @@ def timestamp_blood_pressures(
 
 def show_detections(image):
     """Draws the bp detections on the image."""
-    extractions = extract_blood_pressure(image)
-    img = crop_legend_out(image)
+    img = image.copy()
+    img = preprocess_image(img)
+    systolic_pred, diastolic_pred = make_detections(img)
     draw = ImageDraw.Draw(img)
-    for _, det in extractions.iterrows():
-        box = (det["xmin"], det["ymin"], det["xmax"], det["ymax"])
-        draw.rectangle(box, outline="red")
+    for box in systolic_pred:
+        draw.rectangle(box[:4], outline="#fbb584")
+    for box in diastolic_pred:
+        draw.rectangle(box[:4], outline="#6c799c")
     return img
