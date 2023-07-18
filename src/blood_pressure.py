@@ -33,6 +33,18 @@ class BloodPressure:
     diastolic: int = None
     timestamp: int = None
 
+    def get_box_center(self, box_type: str) -> float:
+        """Computes the x center of the systolic box."""
+
+        def compute_box_center(box):
+            return box[3] + (box[3] - box[1]) / 2
+
+        if box_type == "systolic":
+            return compute_box_center(self.systolic_box)
+        if box_type == "diastolic":
+            return compute_box_center(self.diastolic_box)
+        raise ValueError(f"BloodPressure doesn't have a box called {box_type}")
+
 
 def extract_blood_pressure(image) -> dict:
     """Runs methods in order to extract the blood pressure.
@@ -752,14 +764,16 @@ def get_index_of_smallest_val(row: List[float]) -> int:
         return None
 
 
-def break_up_erroneous_matches(blood_pressures:List[BloodPressure]) -> List[BloodPressure]:
+def break_up_erroneous_matches(
+    blood_pressures: List[BloodPressure],
+) -> List[BloodPressure]:
     """Breaks erroneous matches into 2 BloodPressures using outlier detection.
-    
+
     The particular outlier detection strategy is the Hampler filter.
 
     Args :
         blood_pressures - the blood pressure structs without timestamps.
-    
+
     Returns : The blood pressures with erroneous matches broken into two.
     """
 
