@@ -255,8 +255,11 @@ def find_bp_value_for_bbox(
     def compute_box_y_center(box: List[float]):
         return int(round(box[3] + (box[3] - box[1]), 0))
 
-    image = crop_legend_out(image)
-    horizontal_lines = extract_horizontal_lines(image)
+    cropped_image = crop_legend_out(image)
+    cropped_image = cropped_image.crop(
+        [0, 0, cropped_image.width // 3, cropped_image.height]
+    )
+    horizontal_lines = extract_horizontal_lines(cropped_image)
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
         has_systolic = blood_pressure.systolic_box is not None
