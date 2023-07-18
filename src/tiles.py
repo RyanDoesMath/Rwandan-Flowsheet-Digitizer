@@ -197,14 +197,14 @@ def map_raw_detections_to_full_image(
 
 
 def remove_non_square_detections(
-    predictions: List[List[float]], threshold: float = 0.25
+    predictions: List[List[float]], threshold: float = 0.5
 ) -> List[List[float]]:
     """Removes detections that aren't square enough.
 
     Args :
         predictions - The bounding box predictions.
         threshold - a float to determine how non-square a detection must
-                    be to be removed.
+                    be to be removed. Lower is more strict.
 
     Returns : A list of predictions with non-square detections removed.
     """
