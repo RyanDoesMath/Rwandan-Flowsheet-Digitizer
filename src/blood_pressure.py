@@ -273,6 +273,9 @@ def find_bp_value_for_bbox(
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
+    blood_pressure_predictions = adjust_boxes_for_margins(
+        image, blood_pressure_predictions
+    )
     return blood_pressure_predictions
 
 
@@ -527,6 +530,40 @@ def fill_gaps_in_bp_array(array_with_gaps):
             idxs_to_change.append(i)
         prev = pix_val
     return bp_at_pixel
+
+
+def adjust_boxes_for_margins(
+    image, detections: List[BloodPressure]
+) -> List[BloodPressure]:
+    """Adjusts the boxes for the margins created by the 200 30 crop.
+
+    Args :
+        image - a PIL image.
+        detections - the final detections with BP value and timestamps.
+    Returns :
+    """
+    box_and_class = make_legend_predictions(image)
+    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    for det in detections:
+        if det.systolic_box is not None:
+            det.systolic_box = [
+                det.systolic_box[0],
+                det.systolic_box[1] - two_hundred_box[3],
+                det.systolic_box[2],
+                det.systolic_box[3] - two_hundred_box[3],
+                det.systolic_box[4],
+                det.systolic_box[5],
+            ]
+        if det.diastolic_box is not None:
+            det.diastolic_box = [
+                det.diastolic_box[0],
+                det.diastolic_box[1] + two_hundred_box[1],
+                det.diastolic_box[2],
+                det.diastolic_box[3] + two_hundred_box[1],
+                det.diastolic_box[4],
+                det.diastolic_box[5],
+            ]
+    return detections
 
 
 ###############################################################################
