@@ -783,32 +783,24 @@ def break_up_erroneous_matches(
         dia_center = blood_pressure.get_box_center("diastolic")
         return abs(sys_center - dia_center)
 
-    def hampel_filter(dists):
-        median = np.median(dists)
-        median_absolute_deviation = median_abs_deviation(dists)
-        return (
-            lambda value: value < median - median_absolute_deviation
-            or value > median + median_absolute_deviation
-        )
+    def break_up_bp(blood_pressure: BloodPressure) -> Tuple[BloodPressure]:
+        sys = BloodPressure(systolic_box=blood_pressure.systolic_box)
+        dia = BloodPressure(diastolic_box=blood_pressure.diastolic_box)
+        return sys, dia
 
     all_dists = [distance_between_sys_and_dia_center(bp) for bp in blood_pressures]
     h_filter = hampel_filter(all_dists)
-    flagged_for_removal = []
-    broken_up_bps = []
-    for blood_pressure in blood_pressures:
-        dist = distance_between_sys_and_dia_center(blood_pressure)
-        if h_filter(dist):
-            broken_up_bps.append(
-                BloodPressure(systolic_box=blood_pressure.systolic_box)
-            )
-            broken_up_bps.append(
-                BloodPressure(diastolic_box=blood_pressure.diastolic_box)
-            )
+    broken_up_bps = [break_up_bp(bp) for bp in blood_pressures if h_filter(bp)]
+    bps_with_errors_removed = list(filter(not h_filter, blood_pressures))
 
-    for index in sorted(flagged_for_removal, reverse=True):
-        del blood_pressures[index]
+    return bps_with_errors_removed + broken_up_bps
 
-    return blood_pressures + broken_up_bps
+
+def hampel_filter(values):
+    """Returns a function that can filter values using the Hampel filter."""
+    med = np.nanmedian(values)
+    mad = median_abs_deviation(values, nan_policy="omit")
+    return lambda x: x < med - (3 * mad) or x > med + (3 * mad)
 
 
 def timestamp_blood_pressures(
