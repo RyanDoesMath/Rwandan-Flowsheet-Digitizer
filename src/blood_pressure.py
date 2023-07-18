@@ -80,7 +80,27 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
     )
     im_height = img.size[1]
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, im_height)
+    systolic_pred, diastolic_pred = remove_legend_predictions(
+        image, systolic_pred, diastolic_pred
+    )
     return systolic_pred, diastolic_pred
+
+
+def remove_legend_predictions(
+    image, sys_pred: List[List[float]], dia_pred: List[List[float]]
+) -> Tuple[List[List[float]], List[List[float]]]:
+    """Removes detections made on the legend of the image.
+
+    Args :
+        image - a PIL image.
+        sys_pred - a list of bounding boxes for the systolic predictions.
+        dia_pred - a list of bounding boxes for the diastolic predictions.
+    """
+    box_and_class = make_legend_predictions(image)
+    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    sys_pred = list(filter(lambda box: box[0] > two_hundred_box[2], sys_pred))
+    dia_pred = list(filter(lambda box: box[0] > two_hundred_box[2], dia_pred))
+    return sys_pred, dia_pred
 
 
 def preprocess_image(image):
