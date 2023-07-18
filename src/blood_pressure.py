@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
 import numpy as np
+from scipy.stats import median_abs_deviation
 from ultralytics import YOLO
 import tiles
 import deshadow
@@ -769,13 +770,45 @@ def break_up_erroneous_matches(
 ) -> List[BloodPressure]:
     """Breaks erroneous matches into 2 BloodPressures using outlier detection.
 
-    The particular outlier detection strategy is the Hampler filter.
+    The particular outlier detection strategy is the Hampel filter.
 
     Args :
         blood_pressures - the blood pressure structs without timestamps.
 
     Returns : The blood pressures with erroneous matches broken into two.
     """
+
+    def distance_between_sys_and_dia_center(blood_pressure):
+        sys_center = blood_pressure.get_box_center("systolic")
+        dia_center = blood_pressure.get_box_center("diastolic")
+        return abs(sys_center - dia_center)
+
+    def hampel_filter(dists):
+        median = np.median(dists)
+        median_absolute_deviation = median_abs_deviation(dists)
+        return (
+            lambda value: value < median - median_absolute_deviation
+            or value > median + median_absolute_deviation
+        )
+
+    all_dists = [distance_between_sys_and_dia_center(bp) for bp in blood_pressures]
+    h_filter = hampel_filter(all_dists)
+    flagged_for_removal = []
+    broken_up_bps = []
+    for blood_pressure in blood_pressures:
+        dist = distance_between_sys_and_dia_center(blood_pressure)
+        if h_filter(dist):
+            broken_up_bps.append(
+                BloodPressure(systolic_box=blood_pressure.systolic_box)
+            )
+            broken_up_bps.append(
+                BloodPressure(diastolic_box=blood_pressure.diastolic_box)
+            )
+
+    for index in sorted(flagged_for_removal, reverse=True):
+        del blood_pressures[index]
+
+    return blood_pressures + broken_up_bps
 
 
 def timestamp_blood_pressures(
