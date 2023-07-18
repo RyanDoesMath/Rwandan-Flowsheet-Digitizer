@@ -253,7 +253,7 @@ def find_bp_value_for_bbox(
     """
 
     def compute_box_y_center(box: List[float]):
-        return int(round(box[3] + (box[3] - box[1]), 0))
+        return int(round(box[3] + (box[3] - box[1]) / 2, 0))
 
     cropped_image = crop_legend_out(image)
     cropped_image = cropped_image.crop(
@@ -560,9 +560,9 @@ def adjust_boxes_for_margins(
         if det.diastolic_box is not None:
             det.diastolic_box = [
                 det.diastolic_box[0],
-                det.diastolic_box[1] + two_hundred_box[1],
+                det.diastolic_box[1] - two_hundred_box[1],
                 det.diastolic_box[2],
-                det.diastolic_box[3] + two_hundred_box[1],
+                det.diastolic_box[3] - two_hundred_box[1],
                 det.diastolic_box[4],
                 det.diastolic_box[5],
             ]
