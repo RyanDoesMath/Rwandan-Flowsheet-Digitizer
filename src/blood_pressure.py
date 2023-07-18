@@ -80,7 +80,27 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
     )
     im_height = img.size[1]
     diastolic_pred = adjust_diastolic_preds(diastolic_pred, im_height)
+    systolic_pred, diastolic_pred = remove_legend_predictions(
+        image, systolic_pred, diastolic_pred
+    )
     return systolic_pred, diastolic_pred
+
+
+def remove_legend_predictions(
+    image, sys_pred: List[List[float]], dia_pred: List[List[float]]
+) -> Tuple[List[List[float]], List[List[float]]]:
+    """Removes detections made on the legend of the image.
+
+    Args :
+        image - a PIL image.
+        sys_pred - a list of bounding boxes for the systolic predictions.
+        dia_pred - a list of bounding boxes for the diastolic predictions.
+    """
+    box_and_class = make_legend_predictions(image)
+    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    sys_pred = list(filter(lambda box: box[0] > two_hundred_box[2], sys_pred))
+    dia_pred = list(filter(lambda box: box[0] > two_hundred_box[2], dia_pred))
+    return sys_pred, dia_pred
 
 
 def preprocess_image(image):
@@ -235,8 +255,11 @@ def find_bp_value_for_bbox(
     def compute_box_y_center(box: List[float]):
         return int(round(box[3] + (box[3] - box[1]), 0))
 
-    image = crop_legend_out(image)
-    horizontal_lines = extract_horizontal_lines(image)
+    cropped_image = crop_legend_out(image)
+    cropped_image = cropped_image.crop(
+        [0, 0, cropped_image.width // 3, cropped_image.height]
+    )
+    horizontal_lines = extract_horizontal_lines(cropped_image)
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
         has_systolic = blood_pressure.systolic_box is not None
@@ -253,6 +276,9 @@ def find_bp_value_for_bbox(
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
+    blood_pressure_predictions = adjust_boxes_for_margins(
+        image, blood_pressure_predictions
+    )
     return blood_pressure_predictions
 
 
@@ -507,6 +533,40 @@ def fill_gaps_in_bp_array(array_with_gaps):
             idxs_to_change.append(i)
         prev = pix_val
     return bp_at_pixel
+
+
+def adjust_boxes_for_margins(
+    image, detections: List[BloodPressure]
+) -> List[BloodPressure]:
+    """Adjusts the boxes for the margins created by the 200 30 crop.
+
+    Args :
+        image - a PIL image.
+        detections - the final detections with BP value and timestamps.
+    Returns :
+    """
+    box_and_class = make_legend_predictions(image)
+    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    for det in detections:
+        if det.systolic_box is not None:
+            det.systolic_box = [
+                det.systolic_box[0],
+                det.systolic_box[1] - two_hundred_box[3],
+                det.systolic_box[2],
+                det.systolic_box[3] - two_hundred_box[3],
+                det.systolic_box[4],
+                det.systolic_box[5],
+            ]
+        if det.diastolic_box is not None:
+            det.diastolic_box = [
+                det.diastolic_box[0],
+                det.diastolic_box[1] + two_hundred_box[1],
+                det.diastolic_box[2],
+                det.diastolic_box[3] + two_hundred_box[1],
+                det.diastolic_box[4],
+                det.diastolic_box[5],
+            ]
+    return detections
 
 
 ###############################################################################
