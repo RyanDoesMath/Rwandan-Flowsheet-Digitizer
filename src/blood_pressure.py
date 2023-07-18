@@ -590,6 +590,7 @@ def find_timestamp_for_bboxes(
     dists = generate_x_dists_matrix(bp_bounding_boxes)
     dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
     matches = generate_matches(dists, bp_bounding_boxes)
+    matches = break_up_erroneous_matches(matches)
     timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
     return timestamped_blood_pressures
 
@@ -749,6 +750,18 @@ def get_index_of_smallest_val(row: List[float]) -> int:
     except ValueError as _:
         warnings.warn("Empty list passed into get_index_of_smallest_val().")
         return None
+
+
+def break_up_erroneous_matches(blood_pressures:List[BloodPressure]) -> List[BloodPressure]:
+    """Breaks erroneous matches into 2 BloodPressures using outlier detection.
+    
+    The particular outlier detection strategy is the Hampler filter.
+
+    Args :
+        blood_pressures - the blood pressure structs without timestamps.
+    
+    Returns : The blood pressures with erroneous matches broken into two.
+    """
 
 
 def timestamp_blood_pressures(
