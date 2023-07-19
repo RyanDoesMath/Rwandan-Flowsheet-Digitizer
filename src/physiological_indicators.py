@@ -2,7 +2,7 @@
 physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 from PIL import Image
 from ultralytics import YOLO
 import deshadow
@@ -89,3 +89,19 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["STRIDE"],
         0.3,
     )
+    predictions = [
+        BoundingBox(l, t, r, b, cl, co) for l, t, r, b, cl, co in predictions
+    ]
+    rows = cluster_into_rows(predictions)
+
+
+def cluster_into_rows(predictions: List[BoundingBox]) -> Dict[str, List[BoundingBox]]:
+    """Clusters the observations into rows so that different strategies can
+    be used to impute and correct the values identified by the CNN.
+
+    Args :
+        predictions - the bounding box predictions from the single char model.
+
+    Returns : A dictionary where the name of the section maps to a list of
+              BoundingBoxes for that section.
+    """
