@@ -2,6 +2,8 @@
 physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
 from dataclasses import dataclass
+from typing import Dict
+from PIL import Image
 
 
 @dataclass
@@ -59,3 +61,15 @@ class BloodLoss:
 
     blood_loss_ml: int
     timestamp: int
+
+
+def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
+    """Extracts the physiological indicators from a cropped image
+    of the physiological indicators section of a Rwandan Flowsheet.
+
+    Args :
+        image - a PIL image of the physiological indicators section.
+
+    Returns : A dictionary with keys for each row of the PI section,
+              and a list of timestamped values for that section.
+    """
