@@ -7,6 +7,7 @@ from PIL import Image
 from ultralytics import YOLO
 import deshadow
 import tiles
+from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
@@ -80,4 +81,11 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
               and a list of timestamped values for that section.
     """
     img = deshadow.deshadow_and_normalize_image(image)
-    predictions = tiles.tile_predict(img)
+    predictions = tiles.tile_predict(
+        SINGLE_CHAR_MODEL,
+        img,
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["ROWS"],
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["COLUMNS"],
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["STRIDE"],
+        0.3,
+    )

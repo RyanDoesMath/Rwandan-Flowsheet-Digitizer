@@ -14,6 +14,8 @@ class BoundingBox:
     top: int
     right: int
     bottom: int
+    predicted_class: str
+    confidence: float
 
     def __post_init__(self):
         """Inits variables that depend on the four constructor variables."""
