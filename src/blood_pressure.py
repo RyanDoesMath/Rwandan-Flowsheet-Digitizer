@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from PIL import Image, ImageDraw
 import cv2
 import numpy as np
-from scipy.stats import median_abs_deviation
 from ultralytics import YOLO
 import tiles
 import deshadow
@@ -543,6 +542,8 @@ def fill_gaps_in_bp_array(array_with_gaps):
             output_array[index] = interpolate_value(input_array, index)
         except ZeroDivisionError as _:
             output_array[index] = input_array[index]
+        except IndexError as _:
+            output_array[index] = input_array[index]
 
     output_array = [int(round(x, 0)) for x in output_array]
     return output_array
@@ -558,9 +559,9 @@ def interpolate_value(array, target_index: int) -> float:
     left_ix = target_index
     right_ix = target_index
 
-    while array[left_ix] == 0:
+    while left_ix != 0 and array[left_ix] == 0:
         left_ix -= 1
-    while array[right_ix] == 0:
+    while right_ix != len(array) and array[right_ix] == 0:
         right_ix += 1
 
     left = array[left_ix]
