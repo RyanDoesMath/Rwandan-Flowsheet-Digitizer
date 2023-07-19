@@ -34,16 +34,22 @@ class BloodPressure:
     diastolic: int = None
     timestamp: int = None
 
-    def get_box_center(self, box_type: str) -> float:
+    def get_box_x_center(self, box_type: str) -> float:
         """Computes the x center of the systolic box."""
 
         def compute_box_center(box):
-            return box[3] + (box[3] - box[1]) / 2
+            return box[2] + (box[2] - box[0]) / 2
 
         if box_type == "systolic":
-            return compute_box_center(self.systolic_box)
-        if box_type == "diastolic":
-            return compute_box_center(self.diastolic_box)
+            if self.systolic_box is not None:
+                return compute_box_center(self.systolic_box)
+            else:
+                return None
+        if box_type == "diastolic" and self.diastolic_box is not None:
+            if self.diastolic_box is not None:
+                return compute_box_center(self.diastolic_box)
+            else:
+                return None
         raise ValueError(f"BloodPressure doesn't have a box called {box_type}")
 
 
@@ -270,7 +276,7 @@ def find_bp_value_for_bbox(
 
     cropped_image = crop_legend_out(image)
     cropped_image = cropped_image.crop(
-        [0, 0, cropped_image.width // 3, cropped_image.height]
+        [0, 0, cropped_image.width // 6, cropped_image.height]
     )
     horizontal_lines = extract_horizontal_lines(cropped_image)
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
@@ -522,30 +528,44 @@ def fill_gaps_in_bp_array(array_with_gaps):
         A numpy array with interpolated gaps.
     """
 
-    bp_at_pixel = array_with_gaps.copy()
+    input_array = array_with_gaps.copy()
+    output_array = array_with_gaps.copy()
+    found_first_non_zero_value = False
 
-    idxs_to_change = []
-    begin_count = False
-    bottom = 200
-    prev = 0
-    for i, value in enumerate(bp_at_pixel):
-        pix_val = value
-        if pix_val == 0 and prev != 0:
-            begin_count = True
-        if pix_val != 0 and prev == 0:
-            begin_count = False
-            top = pix_val
-            delta = (top - bottom) / (len(idxs_to_change) + 3)
-            val = bottom
-            for j in idxs_to_change:
-                val += delta
-                bp_at_pixel[j] = val
-            idxs_to_change = []
-            bottom = top
-        if begin_count:
-            idxs_to_change.append(i)
-        prev = pix_val
-    return bp_at_pixel
+    for index, value in enumerate(input_array):
+        if value != 0:
+            found_first_non_zero_value = True
+            continue
+        if not found_first_non_zero_value:
+            continue
+        try:
+            output_array[index] = interpolate_value(input_array, index)
+        except ZeroDivisionError as _:
+            output_array[index] = input_array[index]
+
+    output_array = [int(round(x, 0)) for x in output_array]
+    return output_array
+
+
+def interpolate_value(array, target_index: int) -> float:
+    """Interpolates with the closest non-zero values given an array.
+
+    This function does not handle errors. Always use in a try catch block.
+
+    Returns : The interpolated value.
+    """
+    left_ix = target_index
+    right_ix = target_index
+
+    while array[left_ix] == 0:
+        left_ix -= 1
+    while array[right_ix] == 0:
+        right_ix += 1
+
+    left = array[left_ix]
+    right = array[right_ix]
+    dist = right_ix - left_ix
+    return left - abs(left_ix - target_index) * ((left - right) / dist)
 
 
 def adjust_boxes_for_margins(
@@ -573,9 +593,9 @@ def adjust_boxes_for_margins(
         if det.diastolic_box is not None:
             det.diastolic_box = [
                 det.diastolic_box[0],
-                det.diastolic_box[1] - two_hundred_box[1],
+                det.diastolic_box[1],  # - two_hundred_box[3],
                 det.diastolic_box[2],
-                det.diastolic_box[3] - two_hundred_box[1],
+                det.diastolic_box[3],  # - two_hundred_box[3],
                 det.diastolic_box[4],
                 det.diastolic_box[5],
             ]
@@ -779,8 +799,8 @@ def break_up_erroneous_matches(
     """
 
     def distance_between_sys_and_dia_center(blood_pressure):
-        sys_center = blood_pressure.get_box_center("systolic")
-        dia_center = blood_pressure.get_box_center("diastolic")
+        sys_center = blood_pressure.get_box_x_center("systolic")
+        dia_center = blood_pressure.get_box_x_center("diastolic")
         return abs(sys_center - dia_center)
 
     def break_up_bp(blood_pressure: BloodPressure) -> Tuple[BloodPressure]:
@@ -795,13 +815,13 @@ def break_up_erroneous_matches(
         for bp in blood_pressures
         if h_filter(distance_between_sys_and_dia_center(bp))
     ]
+    broken_up_bps = list(sum(broken_up_bps, ()))  # unpack list of tuples into list.
     bps_with_errors_removed = list(
         filter(
             lambda b: not h_filter(distance_between_sys_and_dia_center(b)),
             blood_pressures,
         )
     )
-
     return bps_with_errors_removed + broken_up_bps
 
 
