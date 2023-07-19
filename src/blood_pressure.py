@@ -62,10 +62,11 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
-    image = preprocess_image(image)
-    systolic_pred, diastolic_pred = make_detections(image)
+    preprocessed_image = preprocess_image(image)
+    cropped_width = crop_legend_out(image).size[0]
+    systolic_pred, diastolic_pred = make_detections(preprocessed_image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
-    bp_pred = find_timestamp_for_bboxes(bp_pred)
+    bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
     bp_pred = find_bp_value_for_bbox(image, bp_pred)
     return bp_pred
 
@@ -540,7 +541,7 @@ def fill_gaps_in_bp_array(array_with_gaps):
             continue
         try:
             output_array[index] = interpolate_value(input_array, index)
-        except ZeroDivisionError as _:
+        except Exception as err:
             output_array[index] = input_array[index]
 
     output_array = [int(round(x, 0)) for x in output_array]
@@ -564,8 +565,10 @@ def interpolate_value(array, target_index: int) -> float:
 
     left = array[left_ix]
     right = array[right_ix]
-    dist = right_ix - left_ix
-    return left - abs(left_ix - target_index) * ((left - right) / dist)
+    d = right_ix - left_ix
+    return array[left_ix] - abs(left_ix - target_index) * (
+        (array[left_ix] - array[right_ix]) / d
+    )
 
 
 def adjust_boxes_for_margins(
@@ -579,7 +582,8 @@ def adjust_boxes_for_margins(
     Returns :
     """
     box_and_class = make_legend_predictions(image)
-    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    _, height = image.size
+    two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
     for det in detections:
         if det.systolic_box is not None:
             det.systolic_box = [
@@ -608,7 +612,7 @@ def adjust_boxes_for_margins(
 
 
 def find_timestamp_for_bboxes(
-    bp_bounding_boxes: Dict[str, List[float]]
+    bp_bounding_boxes: Dict[str, List[float]], cropped_image_width: int
 ) -> List[BloodPressure]:
     """Finds the timestamp for all bounding boxes detected.
 
@@ -620,11 +624,9 @@ def find_timestamp_for_bboxes(
 
     Returns : A list with BloodPressures sorted by timestamp.
     """
-    dists = generate_x_dists_matrix(bp_bounding_boxes)
-    dists, non_matches = filter_non_matches(dists, bp_bounding_boxes)
-    matches = generate_matches(dists, bp_bounding_boxes)
-    matches = break_up_erroneous_matches(matches)
-    timestamped_blood_pressures = timestamp_blood_pressures(matches + non_matches)
+    threshold_dist_for_match = 0.01 * cropped_image_width
+    blood_pressures = get_matches(bp_bounding_boxes, threshold_dist_for_match)
+    timestamped_blood_pressures = timestamp_blood_pressures(blood_pressures)
     return timestamped_blood_pressures
 
 
@@ -655,21 +657,17 @@ def generate_x_dists_matrix(
     return dists
 
 
-def filter_non_matches(
-    dists: List[List[float]], bp_bounding_boxes: Dict[str, List[float]]
-) -> Tuple[List[List[float]], List[BloodPressure]]:
-    """If there are more systolic than diastolic boxes (or vice versa), this
-    method will find the systolic box which is the furthest x-distance from a
-    matching diastolic box, then remove it and create a BloodPressure struct
-    with None for the diastolic box.
-
+def get_matches(
+    bp_bounding_boxes: Dict[str, List[float]], threshold_dist_for_match: float
+) -> List[BloodPressure]:
+    """Gets the matches where a match is computed by two bounding boxes that are
+    reasonably within each other's
     Args :
         bp_bounding_boxes - the bounding boxes for the systolic and diastolic bps.
-        dists - the matrix of distances where the rows correspond to systolic
-                boxes and the columns correspond to diastolic boxes.
+        threshold_dist_for_match - all bp boxes within the threshold are considered
+                                   possible matches. The minimum is selected.
 
-    Returns : a tuple with the distances matrix sans the non-matches and the
-              non-matches as BloodPressure structs.
+    Returns : A list of blood pressures.
     """
     no_systolic_detections = len(bp_bounding_boxes["systolic"]) == 0
     no_diastolic_detections = len(bp_bounding_boxes["diastolic"]) == 0
@@ -685,36 +683,60 @@ def filter_non_matches(
             dists,
             [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
         )
-    dists_was_tranposed = False
-    num_rows = len(dists)
-    num_columns = len(dists[0])
-    if num_columns > num_rows:
-        dists = transpose_dists(dists)
-        num_rows = len(dists)
-        num_columns = len(dists[0])
-        dists_was_tranposed = True
 
-    non_matches = []
-    while num_rows > num_columns:
-        non_match_index = get_index_of_list_with_largest_min_val(dists)
-        non_matches.append(non_match_index)
-        del dists[non_match_index]
-        num_rows = len(dists)
-        num_columns = len(dists[0])
+    def compute_box_center(box):
+        return box[2] + (box[2] - box[0]) / 2
 
-    if dists_was_tranposed:
-        dists = transpose_dists(dists)
-        non_matches = [
-            BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][x])
-            for x in non_matches
+    def distance_between_box_centers(box_1, box_2):
+        return abs(compute_box_center(box_1) - compute_box_center(box_2))
+
+    matches = []
+    for sys_index, sys_box in enumerate(bp_bounding_boxes["systolic"]):
+        distance_to_diastolics = [
+            (dia_index, distance_between_box_centers(sys_box, dia_box))
+            for dia_index, dia_box in enumerate(bp_bounding_boxes["diastolic"])
         ]
-    else:
-        non_matches = [
-            BloodPressure(systolic_box=bp_bounding_boxes["systolic"][x])
-            for x in non_matches
-        ]
+        distance_to_diastolics = list(
+            filter(
+                lambda tup: tup[0] not in [mat[1] for mat in matches],
+                distance_to_diastolics,
+            )
+        )
+        distance_to_diastolics = list(
+            filter(
+                lambda tup: tup[1] < threshold_dist_for_match, distance_to_diastolics
+            )
+        )
+        if len(distance_to_diastolics) > 0:
+            distance_to_diastolics.sort(key=lambda tup: tup[1])
+            dia_index = distance_to_diastolics[0][0]
+            matches.append((sys_index, dia_index))
+    sys_non_matches = list(
+        {x for x in range(0, len(bp_bounding_boxes["systolic"]))}
+        - {tup[0] for tup in matches}
+    )
+    sys_non_matches = [
+        BloodPressure(systolic_box=bp_bounding_boxes["systolic"][index])
+        for index in sys_non_matches
+    ]
+    dia_non_matches = list(
+        {x for x in range(0, len(bp_bounding_boxes["diastolic"]))}
+        - {tup[1] for tup in matches}
+    )
+    dia_non_matches = [
+        BloodPressure(systolic_box=bp_bounding_boxes["diastolic"][index])
+        for index in dia_non_matches
+    ]
+    non_matches = sys_non_matches + dia_non_matches
+    matches = [
+        BloodPressure(
+            systolic_box=bp_bounding_boxes["systolic"][tup[0]],
+            diastolic_box=bp_bounding_boxes["diastolic"][tup[1]],
+        )
+        for tup in matches
+    ]
 
-    return dists, non_matches
+    return matches + non_matches
 
 
 def transpose_dists(dists: List[List[float]]) -> List[List[float]]:
@@ -814,6 +836,7 @@ def break_up_erroneous_matches(
         break_up_bp(bp)
         for bp in blood_pressures
         if h_filter(distance_between_sys_and_dia_center(bp))
+        and distance_between_sys_and_dia_center(bp) > 5
     ]
     broken_up_bps = list(sum(broken_up_bps, ()))  # unpack list of tuples into list.
     bps_with_errors_removed = list(
