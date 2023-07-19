@@ -4,6 +4,12 @@ physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 from dataclasses import dataclass
 from typing import Dict
 from PIL import Image
+from ultralytics import YOLO
+import deshadow
+import tiles
+
+SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
+PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
 
 
 @dataclass
@@ -73,3 +79,5 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
     Returns : A dictionary with keys for each row of the PI section,
               and a list of timestamped values for that section.
     """
+    img = deshadow.deshadow_and_normalize_image(image)
+    predictions = tiles.tile_predict(img)
