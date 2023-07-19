@@ -790,8 +790,17 @@ def break_up_erroneous_matches(
 
     all_dists = [distance_between_sys_and_dia_center(bp) for bp in blood_pressures]
     h_filter = hampel_filter(all_dists)
-    broken_up_bps = [break_up_bp(bp) for bp in blood_pressures if h_filter(bp)]
-    bps_with_errors_removed = list(filter(not h_filter, blood_pressures))
+    broken_up_bps = [
+        break_up_bp(bp)
+        for bp in blood_pressures
+        if h_filter(distance_between_sys_and_dia_center(bp))
+    ]
+    bps_with_errors_removed = list(
+        filter(
+            lambda b: not h_filter(distance_between_sys_and_dia_center(b)),
+            blood_pressures,
+        )
+    )
 
     return bps_with_errors_removed + broken_up_bps
 
