@@ -4,6 +4,7 @@ use to get values for the bounding box detections it made."""
 
 from dataclasses import dataclass
 from typing import List
+from functools import lru_cache
 import warnings
 from PIL import Image
 import numpy as np
@@ -159,3 +160,42 @@ def impute_value_for_erroneous_observations(
             continue
 
         estimate = forward_regression(observations[index - 1], observations[index - 2])
+
+
+def levenshtein_dist(string_1: str, string_2: str) -> int:
+    """This function will calculate the levenshtein distance between two input
+    strings a and b
+
+    Args :
+        string_1 (str) - The first string you want to compare
+        string_2 (str) - The second string you want to compare
+
+    returns:
+        This function will return the distnace between string a and b.
+
+    example:
+        a = 'stamp'
+        b = 'stomp'
+        lev_dist(a,b)
+        >> 1.0
+
+    https://towardsdatascience.com/text-similarity-w-levenshtein-distance-in-python-2f7478986e75
+    """
+
+    @lru_cache(None)  # for memorization
+    def min_dist(str1, str2):
+
+        if str1 == len(string_1) or str2 == len(string_2):
+            return len(string_1) - str1 + len(string_2) - str2
+
+        # no change required
+        if string_1[str1] == string_2[str2]:
+            return min_dist(str1 + 1, str2 + 1)
+
+        return 1 + min(
+            min_dist(str1, str2 + 1),  # insert character
+            min_dist(str1 + 1, str2),  # delete character
+            min_dist(str1 + 1, str2 + 1),  # replace character
+        )
+
+    return min_dist(0, 0)
