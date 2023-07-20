@@ -45,3 +45,25 @@ class BoundingBox:
         if intersection.width > 0 and intersection.height > 0:
             return intersection.area / (self.area + other.area - intersection.area)
         return 0
+
+    def intersection_over_smaller_box(self, other) -> float:
+        """Computes the intersection over the area of the smaller box of the two
+        bounding boxes."""
+        smaller = self if self.area < other.area else other
+        intersection_left, intersection_right = max((self.left, other.left)), min(
+            (self.right, other.right)
+        )
+        intersection_top, intersection_bottom = max((self.top, other.top)), min(
+            (self.bottom, other.bottom)
+        )
+        intersection = BoundingBox(
+            intersection_left,
+            intersection_top,
+            intersection_right,
+            intersection_bottom,
+            -1,
+            -1,
+        )
+        if intersection.width > 0 and intersection.height > 0:
+            return intersection.area / smaller.area
+        return 0
