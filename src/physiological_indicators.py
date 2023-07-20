@@ -7,6 +7,9 @@ import warnings
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
+import torch
+import torch.nn as nn
+from torchvision import models
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import deshadow
@@ -16,55 +19,14 @@ from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
-
-
-@dataclass
-class EndTidalCarbonDioxide:
-    """Dataclass for etco2."""
-
-    percent: int
-    timestamp: int
-
-
-@dataclass
-class FractionOfInspiredOxygen:
-    """Dataclass for fio2."""
-
-    percent: int
-    timestamp: int
-
-
-@dataclass
-class TidalVolume:
-    """Dataclass for Tidal Vol x F."""
-
-    tidal_volume_ml: int
-    respiratory_rate: int
-    timestamp: int
-
-
-@dataclass
-class Temperature:
-    """Dataclass for temp in celcius."""
-
-    temp_c: int
-    timestamp: int
-
-
-@dataclass
-class Diuresis:
-    """Dataclass for diuresis (urine output)."""
-
-    diuresis_ml: int
-    timestamp: int
-
-
-@dataclass
-class BloodLoss:
-    """Dataclass for estimated blood loss."""
-
-    blood_loss_ml: int
-    timestamp: int
+CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
+num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
+CHAR_CLASSIFICATION_MODEL.num_classes = 10
+CHAR_CLASSIFICATION_MODEL.fc = nn.Linear(num_ftrs, 10)
+CHAR_CLASSIFICATION_MODEL.load_state_dict(
+    torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
+)
+CHAR_CLASSIFICATION_MODEL.eval()
 
 
 def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
@@ -227,4 +189,4 @@ def get_values_for_boxes(
     Returns : The actual values for that section in a list of objects.
     """
     strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
-    return strategies[section_name](boxes, image)
+    return strategies[section_name](boxes, image, CHAR_CLASSIFICATION_MODEL)

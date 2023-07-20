@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from typing import List
 import warnings
 from PIL import Image
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
 
 
@@ -19,13 +22,16 @@ class OxygenSaturation:
     implausible: bool = False
 
 
-def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
+def get_values_for_boxes(
+    boxes: List[BoundingBox], image: Image.Image, char_classification_model
+) -> list:
     """Implements a strategy for getting the values for the spo2
     boxes from the physiological indicator section.
 
     Args :
         boxes - the boxes in that section.
         image - the image that the boxes come from.
+        char_classification_model - the CNN that classifies the individual characters.
 
     Returns : The actual values for the spo2 section in a list of objects.
     """
@@ -41,6 +47,25 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
 
 def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox]]:
     """Clusters the individual boxes into groups that are likely to go together."""
+    lower_lim = len(boxes) // 3 - int(0.2 * len(boxes) // 3)
+    upper_lim = len(boxes) // 2 + int(0.2 * len(boxes) // 2)
+
+    x_centers = [box.x_center for box in boxes]
+    x_centers = np.array(x_centers).reshape(-1, 1)
+
+    scores = {}
+    for val in range(lower_lim, upper_lim + 1):
+        kmeans = KMeans(n_init=10, n_clusters=val).fit(x_centers)
+        preds = kmeans.fit_predict(x_centers)
+        scores[val] = silhouette_score(x_centers, preds)
+
+    best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
+    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(x_centers)
+    preds = kmeans.fit_predict(x_centers)
+    masks = [[True if x == u else False for x in preds] for u in np.unique(preds)]
+    sorted_boxes = [[x for ix, x in enumerate(boxes) if m[ix]] for m in masks]
+
+    return sorted_boxes
 
 
 def predict_values(observations: List[BoundingBox]) -> List[OxygenSaturation]:
