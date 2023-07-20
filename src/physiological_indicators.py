@@ -111,21 +111,30 @@ def cluster_into_rows(
               BoundingBoxes for that section.
     """
     y_centers = [bb.y_center for bb in predictions]
+    y_centers = np.array(y_centers).reshape(-1, 1)
     best_cluster_value = find_number_of_rows(predictions, im_height)
-    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(
-        np.array(y_centers).reshape(-1, 1)
-    )
-    preds = kmeans.fit_predict(np.array(y_centers).reshape(-1, 1))
+
+    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(y_centers)
+    preds = kmeans.fit_predict(y_centers)
+    clusters = []
+    for cluster_value in preds.unique():
+        indices_in_cluster = [ix for ix, x in preds if x == cluster_value]
+        clusters.append([predictions[ix] for ix in indices_in_cluster])
+
+    rows = {}
+    for cluster in clusters:
+        label = get_label_for_cluster(cluster, im_height)
 
 
 def find_number_of_rows(predictions: List[BoundingBox], im_height: int) -> int:
     """Finds the number of rows that have been filled out on the sheet."""
     has_one_cluster = check_if_section_has_only_one_row(predictions, im_height)
     if has_one_cluster:
-        pass
-    y_centers = [bb.y_center for bb in predictions]
-    scores = compute_silhouette_scores(y_centers)
-    best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
+        best_cluster_value = 1
+    else:
+        y_centers = [bb.y_center for bb in predictions]
+        scores = compute_silhouette_scores(y_centers)
+        best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
 
     return best_cluster_value
 
@@ -159,3 +168,30 @@ def check_if_section_has_only_one_row(
     min_val = min(y_centers)
     max_allowable_diff = 0.1 * im_height
     return abs(max_val - min_val) < max_allowable_diff
+
+
+def get_label_for_cluster(cluster: List[BoundingBox], im_height: int) -> str:
+    """Applies a label to a cluster.
+
+    There are a lot of magic numbers in here. Essentially, the values are the
+    plausible y locations where the centroid of the top end of the box can be.
+
+    This was established empirically, and the clusters don't overlap.
+    """
+    top_centroid = sum([bb.top for bb in cluster]) / len(cluster)
+    top_centroid /= im_height
+    if top_centroid in range(0, 0.137687):
+        return "SpO2"
+    elif top_centroid in range(0.137687, 0.265647):
+        return "EtCO2"
+    elif top_centroid in range(0.265647, 0.390272):
+        return "FiO2"
+    elif top_centroid in range(0.390272, 0.521633):
+        return "Tidal_VolxF"
+    elif top_centroid in range(0.521633, 0.656327):
+        return "Temp_C"
+    elif top_centroid in range(0.656327, 0.787619):
+        return "Diuresis"
+    elif top_centroid in range(0.787619, 1.0):
+        return "Blood_Loss"
+    return "Unknown"
