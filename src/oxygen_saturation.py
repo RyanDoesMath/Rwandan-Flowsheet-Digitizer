@@ -142,3 +142,20 @@ def impute_value_for_erroneous_observations(
     chosen, or, in the case where there are no one-edit values that are in the
     range (75, 100), the regression estimation itself is rounded and used.
     """
+
+    def forward_regression(t_minus_1: int, t_minus_2: int) -> float:
+        beta_1 = 0.5904
+        beta_2 = 0.3844
+        intercept = 12.2984
+        return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
+
+    for index, obs in enumerate(observations):
+        if (
+            not obs.implausible
+            or index < 2
+            or observations[index - 1].implausible
+            or observations[index - 2].implausible
+        ):
+            continue
+
+        estimate = forward_regression(observations[index - 1], observations[index - 2])
