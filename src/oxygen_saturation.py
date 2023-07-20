@@ -160,7 +160,7 @@ def impute_value_for_erroneous_observations(
             continue
 
         forward_estimate = forward_regression(
-            observations[index - 1], observations[index - 2]
+            observations[index - 1].percent, observations[index - 2].percent
         )
         backward_estimate = forward_estimate
         obs.percent = correct_erroneous_observation(
