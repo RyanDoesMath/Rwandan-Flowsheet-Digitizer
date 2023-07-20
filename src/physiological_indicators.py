@@ -3,8 +3,11 @@ physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
 from dataclasses import dataclass
 from typing import Dict, List
+import numpy as np
 from PIL import Image
 from ultralytics import YOLO
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 import deshadow
 import tiles
 from bounding_box import BoundingBox
@@ -87,15 +90,17 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["ROWS"],
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["COLUMNS"],
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["STRIDE"],
-        0.3,
+        0.5,
     )
     predictions = [
         BoundingBox(l, t, r, b, cl, co) for l, t, r, b, cl, co in predictions
     ]
-    rows = cluster_into_rows(predictions)
+    rows = cluster_into_rows(predictions, img.size[1])
 
 
-def cluster_into_rows(predictions: List[BoundingBox]) -> Dict[str, List[BoundingBox]]:
+def cluster_into_rows(
+    predictions: List[BoundingBox], im_height: int
+) -> Dict[str, List[BoundingBox]]:
     """Clusters the observations into rows so that different strategies can
     be used to impute and correct the values identified by the CNN.
 
@@ -105,3 +110,42 @@ def cluster_into_rows(predictions: List[BoundingBox]) -> Dict[str, List[Bounding
     Returns : A dictionary where the name of the section maps to a list of
               BoundingBoxes for that section.
     """
+    y_centers = [bb.y_center for bb in predictions]
+    best_cluster_value = find_number_of_rows(predictions, im_height)
+    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(
+        np.array(y_centers).reshape(-1, 1)
+    )
+    preds = kmeans.fit_predict(np.array(y_centers).reshape(-1, 1))
+
+
+def find_number_of_rows(predictions: List[BoundingBox], im_height: int) -> int:
+    """Finds the number of rows that have been filled out on the sheet."""
+    has_one_cluster = check_if_section_has_only_one_row(predictions, im_height)
+    if has_one_cluster:
+        pass
+    y_centers = [bb.y_center for bb in predictions]
+    scores = compute_silhouette_scores(y_centers)
+    best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
+
+    return best_cluster_value
+
+
+def compute_silhouette_scores(y_centers: List[float]) -> Dict[int, float]:
+    """Gets the kmeans silhouette scores for all plausible values of k."""
+    y_centers = np.array(y_centers).reshape(-1, 1)
+    max_rows = 7
+    scores = {}
+    for num_rows in range(2, max_rows + 1):
+        if num_rows == 0:
+            continue
+        kmeans = KMeans(n_init=10, n_clusters=num_rows).fit(y_centers)
+        preds = kmeans.fit_predict(y_centers)
+        scores[num_rows] = silhouette_score(y_centers, preds)
+
+    return scores
+
+
+def check_if_section_has_only_one_row(
+    predictions: List[BoundingBox], im_height: int
+) -> bool:
+    """Checks if a section has only one row since KMeans needs 2 clusers to run."""
