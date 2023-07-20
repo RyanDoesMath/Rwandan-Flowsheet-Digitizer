@@ -18,27 +18,25 @@ class OxygenSaturation:
     """Dataclass for spo2."""
 
     chars: list
+    boxes: list
     percent: int
     timestamp: int
     implausible: bool = False
 
 
-def get_values_for_boxes(
-    boxes: List[BoundingBox], image: Image.Image, char_classification_model
-) -> list:
+def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
     """Implements a strategy for getting the values for the spo2
     boxes from the physiological indicator section.
 
     Args :
         boxes - the boxes in that section.
         image - the image that the boxes come from.
-        char_classification_model - the CNN that classifies the individual characters.
 
     Returns : The actual values for the spo2 section in a list of objects.
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes)
-    observations = predict_values(observations, image, char_classification_model)
+    observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
     observations = flag_implausible_observations(observations)
     observations = impute_value_for_erroneous_observations(observations)
@@ -70,7 +68,7 @@ def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox
 
 
 def predict_values(
-    observations: List[BoundingBox], image: Image.Image, cnn
+    observations: List[BoundingBox], image: Image.Image
 ) -> List[OxygenSaturation]:
     """Uses a CNN to classify the individual images.
 
