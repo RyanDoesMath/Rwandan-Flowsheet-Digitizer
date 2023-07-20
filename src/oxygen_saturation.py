@@ -199,3 +199,20 @@ def levenshtein_dist(string_1: str, string_2: str) -> int:
         )
 
     return min_dist(0, 0)
+
+
+def argmin(target_list: list) -> int:
+    """Returns the index of the minimum value of a list."""
+    return min(range(len(target_list)), key=lambda x: target_list[x])
+
+
+def remove_until_length_three(observation: OxygenSaturation):
+    """Removes boxes from observation until there are three left."""
+    confs = [box.confidence for box in observation.boxes]
+    if len(observation.boxes) <= 3:
+        return observation
+    while len(observation.boxes) > 3:
+        del_index = argmin(confs)
+        del observation.boxes[del_index]
+        del confs[del_index]
+    return observation
