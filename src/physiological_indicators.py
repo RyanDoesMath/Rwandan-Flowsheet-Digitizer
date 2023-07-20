@@ -96,6 +96,7 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         BoundingBox(l, t, r, b, cl, co) for l, t, r, b, cl, co in predictions
     ]
     rows = cluster_into_rows(predictions, img.size[1])
+    print(rows)
 
 
 def cluster_into_rows(
@@ -113,17 +114,14 @@ def cluster_into_rows(
     y_centers = [bb.y_center for bb in predictions]
     y_centers = np.array(y_centers).reshape(-1, 1)
     best_cluster_value = find_number_of_rows(predictions, im_height)
-
-    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(y_centers)
-    preds = kmeans.fit_predict(y_centers)
-    clusters = []
-    for cluster_value in preds.unique():
-        indices_in_cluster = [ix for ix, x in preds if x == cluster_value]
-        clusters.append([predictions[ix] for ix in indices_in_cluster])
+    clusters = get_clusters(predictions, best_cluster_value, y_centers)
 
     rows = {}
     for cluster in clusters:
         label = get_label_for_cluster(cluster, im_height)
+        rows[label] = cluster
+
+    return rows
 
 
 def find_number_of_rows(predictions: List[BoundingBox], im_height: int) -> int:
@@ -170,16 +168,30 @@ def check_if_section_has_only_one_row(
     return abs(max_val - min_val) < max_allowable_diff
 
 
+def get_clusters(
+    predictions: List[BoundingBox], best_cluster_value: int, y_centers=List[float]
+):
+    """Returns a list of clusters based on the best cluster value for k."""
+    kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(y_centers)
+    preds = kmeans.fit_predict(y_centers)
+    clusters = []
+    for cluster_value in preds.unique():
+        indices_in_cluster = [ix for ix, x in preds if x == cluster_value]
+        clusters.append([predictions[ix] for ix in indices_in_cluster])
+
+    return clusters
+
+
 def get_label_for_cluster(cluster: List[BoundingBox], im_height: int) -> str:
     """Applies a label to a cluster.
 
     There are a lot of magic numbers in here. Essentially, the values are the
     plausible y locations where the centroid of the top end of the box can be.
 
-    This was established empirically, and the clusters don't overlap.
+    This was established empirically, and the clusters don't overlap. These
+    values are normalized to the image height.
     """
-    top_centroid = sum([bb.top for bb in cluster]) / len(cluster)
-    top_centroid /= im_height
+    top_centroid = np.mean([bb.top for bb in cluster]) / im_height
     if top_centroid in range(0, 0.137687):
         return "SpO2"
     elif top_centroid in range(0.137687, 0.265647):
