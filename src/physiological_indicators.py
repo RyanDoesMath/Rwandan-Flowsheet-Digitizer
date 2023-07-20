@@ -188,10 +188,7 @@ def get_values_for_boxes(
     Returns : The actual values for that section in a list of objects.
     """
     strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
-    if section_name in list(strategies.keys()):
-        return strategies[section_name](boxes, image)
-    else:
-        return []
+    return strategies[section_name](boxes, image)
 
 
 def classify_image(image: Image.Image):
