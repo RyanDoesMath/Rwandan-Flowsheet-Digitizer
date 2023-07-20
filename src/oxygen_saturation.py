@@ -7,6 +7,7 @@ from typing import List
 import warnings
 from PIL import Image
 import numpy as np
+from torchvision import transforms
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
@@ -37,7 +38,7 @@ def get_values_for_boxes(
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes)
-    observations = predict_values(observations)
+    observations = predict_values(observations, image, char_classification_model)
     observations = impute_naive_value(observations)
     observations = flag_implausible_observations(observations)
     observations = impute_value_for_erroneous_observations(observations)
@@ -68,11 +69,27 @@ def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox
     return sorted_boxes
 
 
-def predict_values(observations: List[BoundingBox]) -> List[OxygenSaturation]:
+def predict_values(
+    observations: List[BoundingBox], image: Image.Image, cnn
+) -> List[OxygenSaturation]:
     """Uses a CNN to classify the individual images.
 
     Returns : A list of OxygenSaturation objects with no percent or timestamp.
     """
+
+
+def classify_image(image: Image.Image, cnn):
+    """Uses a CNN to classify a PIL Image."""
+    datatransform = transforms.Compose(
+        [
+            transforms.Resize(size=(40, 40)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+    input_image = datatransform(image)
+    pred = cnn(input_image.unsqueeze(0)).tolist()[0]
+    return np.argmax(pred)
 
 
 def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSaturation]:

@@ -1,7 +1,6 @@
 """The physiological_indicators module extracts the data from the
 physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
-from dataclasses import dataclass
 from typing import Dict, List
 import warnings
 import numpy as np
