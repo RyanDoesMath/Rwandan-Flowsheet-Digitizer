@@ -8,7 +8,7 @@ from PIL import Image
 from ultralytics import YOLO
 import torch
 import torch.nn as nn
-from torchvision import models
+from torchvision import models, transforms
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import deshadow
@@ -189,3 +189,17 @@ def get_values_for_boxes(
     """
     strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
     return strategies[section_name](boxes, image, CHAR_CLASSIFICATION_MODEL)
+
+
+def classify_image(image: Image.Image):
+    """Uses a CNN to classify a PIL Image."""
+    datatransform = transforms.Compose(
+        [
+            transforms.Resize(size=(40, 40)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+    input_image = datatransform(image)
+    pred = CHAR_CLASSIFICATION_MODEL(input_image.unsqueeze(0)).tolist()[0]
+    return np.argmax(pred)
