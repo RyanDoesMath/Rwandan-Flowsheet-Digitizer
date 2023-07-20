@@ -1,6 +1,10 @@
 """The physiological_indicators module extracts the data from the
 physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
+import os
+
+print(os.getcwd())
+
 from dataclasses import dataclass
 from typing import Dict, List
 import numpy as np
@@ -11,6 +15,7 @@ from sklearn.metrics import silhouette_score
 import deshadow
 import tiles
 from bounding_box import BoundingBox
+
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
