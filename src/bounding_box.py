@@ -25,7 +25,7 @@ class BoundingBox:
         self.y_center = self.top + (self.height / 2)
         self.area = (self.right - self.left) * (self.bottom - self.top)
 
-    def intersection_over_union(self, other: BoundingBox) -> float:
+    def intersection_over_union(self, other) -> float:
         """Computes the intersection over union of the two bounding boxes."""
         intersection_left, intersection_right = max((self.left, other.left)), min(
             (self.right, other.right)
