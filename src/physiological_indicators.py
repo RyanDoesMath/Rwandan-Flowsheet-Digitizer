@@ -3,6 +3,7 @@ physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
 from dataclasses import dataclass
 from typing import Dict, List
+import warnings
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
