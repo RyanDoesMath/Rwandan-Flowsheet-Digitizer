@@ -148,4 +148,14 @@ def compute_silhouette_scores(y_centers: List[float]) -> Dict[int, float]:
 def check_if_section_has_only_one_row(
     predictions: List[BoundingBox], im_height: int
 ) -> bool:
-    """Checks if a section has only one row since KMeans needs 2 clusers to run."""
+    """Checks if a section has only one row since KMeans needs 2 clusers to run.
+
+    Essentially, 10% is around 60 of the height of a full row. If the largest
+    difference between the max and min value is less than 10%, it is very likely
+    there is only one row.
+    """
+    y_centers = [bb.y_center for bb in predictions]
+    max_val = max(y_centers)
+    min_val = min(y_centers)
+    max_allowable_diff = 0.1 * im_height
+    return abs(max_val - min_val) < max_allowable_diff
