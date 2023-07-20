@@ -159,7 +159,36 @@ def impute_value_for_erroneous_observations(
         ):
             continue
 
-        estimate = forward_regression(observations[index - 1], observations[index - 2])
+        forward_estimate = forward_regression(
+            observations[index - 1], observations[index - 2]
+        )
+        backward_estimate = forward_estimate
+        obs.percent = correct_erroneous_observation(
+            obs, forward_estimate, backward_estimate
+        )
+
+    return observations
+
+
+def correct_erroneous_observation(
+    observation: OxygenSaturation, forward_estimate: float, backward_estimate: float
+):
+    """Corrects a single erroneous observation."""
+    observation = remove_until_length_three(observation)
+    estimate = np.mean([forward_estimate, backward_estimate])
+    possible_correct_values = []
+    current_prediction = "".join([str(x) for x in observation.chars])
+    for val in range(75, 101):
+        edit_dist = levenshtein_dist(str(val), current_prediction)
+        if edit_dist in [0, 1]:
+            possible_correct_values.append(val)
+
+    if len(possible_correct_values) == 0:
+        return int(round(estimate, 0))
+    distance_from_predicted_value = {
+        k: abs(k - estimate) for k in possible_correct_values
+    }
+    return min(distance_from_predicted_value, key=distance_from_predicted_value.get)
 
 
 def levenshtein_dist(string_1: str, string_2: str) -> int:
@@ -206,7 +235,7 @@ def argmin(target_list: list) -> int:
     return min(range(len(target_list)), key=lambda x: target_list[x])
 
 
-def remove_until_length_three(observation: OxygenSaturation):
+def remove_until_length_three(observation: OxygenSaturation) -> OxygenSaturation:
     """Removes boxes from observation until there are three left."""
     confs = [box.confidence for box in observation.boxes]
     if len(observation.boxes) <= 3:
