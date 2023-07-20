@@ -74,6 +74,24 @@ def predict_values(
 
     Returns : A list of OxygenSaturation objects with no percent or timestamp.
     """
+    values = []
+    for cluster in observations:
+        cluster_chars = []
+        cluster_boxes = []
+        for bbox in cluster:
+            single_char_img = image.crop(bbox.box)
+            number = classify_image(single_char_img)
+            cluster_chars.append(number)
+            cluster_boxes.append(bbox)
+        obs = OxygenSaturation(
+            chars=cluster_chars,
+            boxes=cluster_boxes,
+            percent=-1,
+            timestamp=-1,
+            implausible=False,
+        )
+        values.append(obs)
+    return values
 
 
 def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSaturation]:
