@@ -27,18 +27,20 @@ class BoundingBox:
 
     def intersection_over_union(self, other: BoundingBox) -> float:
         """Computes the intersection over union of the two bounding boxes."""
-        smaller, _ = (self, other) if self.area < other.area else (other, self)
         intersection_left, intersection_right = max((self.left, other.left)), min(
             (self.right, other.right)
         )
         intersection_top, intersection_bottom = max((self.top, other.top)), min(
             (self.bottom, other.bottom)
         )
-        width, height = (
-            intersection_right - intersection_left,
-            intersection_bottom - intersection_top,
+        intersection = BoundingBox(
+            intersection_left,
+            intersection_top,
+            intersection_right,
+            intersection_bottom,
+            -1,
+            -1,
         )
-        intersection_area = width * height
-        if width > 0 and height > 0:
-            return intersection_area / smaller.area
+        if intersection.width > 0 and intersection.height > 0:
+            return intersection.area / (self.area + other.area - intersection.area)
         return 0
