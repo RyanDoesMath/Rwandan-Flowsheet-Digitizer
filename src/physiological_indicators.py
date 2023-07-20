@@ -97,7 +97,11 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         BoundingBox(l, t, r, b, co, cl) for l, t, r, b, cl, co in predictions
     ]
     rows = cluster_into_rows(predictions, img.size[1])
-    return rows
+
+    indicators = {}
+    for name, boxes in rows.items():
+        indicators[name] = get_values_for_boxes(name, boxes, image)
+    return indicators
 
 
 def cluster_into_rows(
@@ -211,3 +215,20 @@ def get_label_for_cluster(cluster: List[BoundingBox], im_height: int) -> str:
     if 0.787619 < top_centroid:
         return "Blood_Loss"
     return "Unknown"
+
+
+def get_values_for_boxes(
+    section_name: str, boxes: List[BoundingBox], image: Image.Image
+) -> list:
+    """Imputes the values for the bounding boxes in the section.
+
+    Uses different strategies for each section for classifying the
+    characters, clustering characters into observations, flagging
+    incorrect values, and imputing values to flagged observations.
+
+    Args :
+        section_name - used to select the strategy.
+        boxes - the boxes in that section.
+
+    Returns : The actual values for that section in a list of objects.
+    """
