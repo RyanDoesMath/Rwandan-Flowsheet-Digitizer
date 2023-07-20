@@ -11,6 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import deshadow
 import tiles
+import oxygen_saturation
 from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
@@ -229,6 +230,9 @@ def get_values_for_boxes(
     Args :
         section_name - used to select the strategy.
         boxes - the boxes in that section.
+        image - the image that the boxes come from.
 
     Returns : The actual values for that section in a list of objects.
     """
+    strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
+    return strategies[section_name](boxes, image)
