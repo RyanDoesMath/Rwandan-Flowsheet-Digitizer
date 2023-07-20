@@ -38,7 +38,7 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
     observations = cluster_into_observations(boxes)
     observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
-    observations = flag_implausible_observations(observations)
+    observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
@@ -102,9 +102,18 @@ def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSatur
 
     Returns : A list of OxygenSaturations with percent values.
     """
+    lowest_plausible_value = 75
+    highest_plausible_value = 100
+    for obs in observations:
+        naive_value = int("".join([str(x) for x in obs.chars]))
+        if lowest_plausible_value <= naive_value <= highest_plausible_value:
+            obs.percent = naive_value
+        else:
+            obs.implausible = True
+    return observations
 
 
-def flag_implausible_observations(
+def flag_jumps_as_implausible(
     observations: List[OxygenSaturation],
 ) -> List[OxygenSaturation]:
     """Flags values that are implausible.
@@ -117,6 +126,7 @@ def flag_implausible_observations(
     So, to 'derate' this threshold, we double it to 8. This is enough to
     catch errors made in the tens place (IE: 89 instead of 99).
     """
+    return observations
 
 
 def impute_value_for_erroneous_observations(
