@@ -19,14 +19,6 @@ PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
 
 
 @dataclass
-class OxygenSaturation:
-    """Dataclass for spo2."""
-
-    percent: int
-    timestamp: int
-
-
-@dataclass
 class EndTidalCarbonDioxide:
     """Dataclass for etco2."""
 
