@@ -93,10 +93,10 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         0.5,
     )
     predictions = [
-        BoundingBox(l, t, r, b, cl, co) for l, t, r, b, cl, co in predictions
+        BoundingBox(l, t, r, b, co, cl) for l, t, r, b, cl, co in predictions
     ]
     rows = cluster_into_rows(predictions, img.size[1])
-    print(rows)
+    return rows
 
 
 def cluster_into_rows(
@@ -111,6 +111,8 @@ def cluster_into_rows(
     Returns : A dictionary where the name of the section maps to a list of
               BoundingBoxes for that section.
     """
+    warnings.filterwarnings("ignore")
+
     y_centers = [bb.y_center for bb in predictions]
     y_centers = np.array(y_centers).reshape(-1, 1)
     best_cluster_value = find_number_of_rows(predictions, im_height)
@@ -121,6 +123,7 @@ def cluster_into_rows(
         label = get_label_for_cluster(cluster, im_height)
         rows[label] = cluster
 
+    warnings.filterwarnings("default")
     return rows
 
 
@@ -175,8 +178,8 @@ def get_clusters(
     kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(y_centers)
     preds = kmeans.fit_predict(y_centers)
     clusters = []
-    for cluster_value in preds.unique():
-        indices_in_cluster = [ix for ix, x in preds if x == cluster_value]
+    for cluster_value in np.unique(preds):
+        indices_in_cluster = [ix for ix, x in enumerate(preds) if x == cluster_value]
         clusters.append([predictions[ix] for ix in indices_in_cluster])
 
     return clusters
@@ -192,18 +195,18 @@ def get_label_for_cluster(cluster: List[BoundingBox], im_height: int) -> str:
     values are normalized to the image height.
     """
     top_centroid = np.mean([bb.top for bb in cluster]) / im_height
-    if top_centroid in range(0, 0.137687):
+    if top_centroid < 0.137687:
         return "SpO2"
-    elif top_centroid in range(0.137687, 0.265647):
+    if 0.137687 < top_centroid <= 0.265647:
         return "EtCO2"
-    elif top_centroid in range(0.265647, 0.390272):
+    if 0.265647 < top_centroid <= 0.390272:
         return "FiO2"
-    elif top_centroid in range(0.390272, 0.521633):
+    if 0.390272 < top_centroid <= 0.521633:
         return "Tidal_VolxF"
-    elif top_centroid in range(0.521633, 0.656327):
+    if 0.521633 < top_centroid <= 0.656327:
         return "Temp_C"
-    elif top_centroid in range(0.656327, 0.787619):
+    if 0.656327 < top_centroid <= 0.787619:
         return "Diuresis"
-    elif top_centroid in range(0.787619, 1.0):
+    if 0.787619 < top_centroid:
         return "Blood_Loss"
     return "Unknown"
