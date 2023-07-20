@@ -4,6 +4,7 @@ use to get values for the bounding box detections it made."""
 
 from dataclasses import dataclass
 from typing import List
+import warnings
 from PIL import Image
 from bounding_box import BoundingBox
 
@@ -28,12 +29,13 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
 
     Returns : The actual values for the spo2 section in a list of objects.
     """
+    warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes)
     observations = predict_values(observations)
     observations = impute_naive_value(observations)
     observations = flag_implausible_observations(observations)
     observations = impute_value_for_erroneous_observations(observations)
-
+    warnings.filterwarnings("default")
     return observations
 
 
