@@ -255,7 +255,9 @@ def remove_overlapping_detections(
     Returns : A list of predictions where the remaining boxes do not overlap significantly.
     """
     remove = []
-    rects = sorted(predictions, key=lambda x: x[4], reverse=True)  # sort by confidence.
+    rects = sorted(
+        predictions, key=lambda x: x.confidence, reverse=True
+    )  # sort by confidence.
     for this_ix, this_rect in enumerate(rects):
         for that_ix, that_rect in enumerate(rects[this_ix + 1 :]):
             if strategy == "iou":
