@@ -181,7 +181,7 @@ def map_raw_detections_to_full_image(
     width: int,
     height: int,
     stride: float,
-):
+) -> List[BoundingBox]:
     """Maps the coordinates of the raw detections to where they are on the full image.
 
     Args :
@@ -198,25 +198,29 @@ def map_raw_detections_to_full_image(
     mapped_boxes = []
 
     for col_ix, col in enumerate(predictions):
-        for row_ix, box in enumerate(col):
+        for row_ix, row in enumerate(col):
             boxes = row.copy()
             for box in boxes:
                 mapped_boxes.append(
                     [
-                        box[0] + x_coords[col_ix],
-                        box[1] + y_coords[row_ix],
-                        box[2] + x_coords[col_ix],
-                        box[3] + y_coords[row_ix],
-                        box[4],
-                        box[5],
+                        box.left + x_coords[col_ix],
+                        box.top + y_coords[row_ix],
+                        box.right + x_coords[col_ix],
+                        box.bottom + y_coords[row_ix],
+                        box.predicted_class,
+                        box.confidence,
                     ]
                 )
+
+    mapped_boxes = [
+        BoundingBox(mb[0], mb[1], mb[2], mb[3], mb[4], mb[5]) for mb in mapped_boxes
+    ]
     return mapped_boxes
 
 
 def remove_non_square_detections(
-    predictions: List[List[BoundingBox]], threshold: float = 0.5
-) -> List[List[BoundingBox]]:
+    predictions: List[BoundingBox], threshold: float = 0.5
+) -> List[BoundingBox]:
     """Removes detections that aren't square enough.
 
     Args :
@@ -228,8 +232,8 @@ def remove_non_square_detections(
     """
     remove = []
     for index, box in enumerate(predictions):
-        left, right = min(box[0], box[2]), max(box[0], box[2])
-        top, bottom = min(box[1], box[3]), max(box[1], box[3])
+        left, right = min(box.left, box.right), max(box.left, box.right)
+        top, bottom = min(box.top, box.bottom), max(box.top, box.bottom)
         width = left - right
         height = top - bottom
         if abs((width - height) / ((height + width) / 2)) > threshold:
@@ -240,8 +244,8 @@ def remove_non_square_detections(
 
 
 def remove_overlapping_detections(
-    predictions: List[List[BoundingBox]], overlap_tolerance: float
-) -> List[List[BoundingBox]]:
+    predictions: List[BoundingBox], overlap_tolerance: float, strategy: str = "iou"
+) -> List[BoundingBox]:
     """Removes detections that overlap too much.
 
     Args :
@@ -254,7 +258,11 @@ def remove_overlapping_detections(
     rects = sorted(predictions, key=lambda x: x[4], reverse=True)  # sort by confidence.
     for this_ix, this_rect in enumerate(rects):
         for that_ix, that_rect in enumerate(rects[this_ix + 1 :]):
-            if intersection_over_union(this_rect, that_rect) > overlap_tolerance:
+            if strategy == "iou":
+                criteria = this_rect.intersection_over_union(that_rect)
+            else:
+                criteria = this_rect.intersection_over_smaller_box(that_rect)
+            if criteria > overlap_tolerance:
                 index_to_remove = (
                     this_ix if this_rect[4] < that_rect[4] else this_ix + that_ix + 1
                 )
@@ -262,31 +270,6 @@ def remove_overlapping_detections(
     for index in sorted(list(set(remove)), reverse=True):
         del rects[index]
     return rects
-
-
-def intersection_over_union(box_a: List[float], box_b: List[float]):
-    """Computes the bounding box intersection over union.
-
-    Parameters:
-        box_a - the first box (order doesn't matter.)
-        box_b - the second box (order doesn't matter.)
-
-    Returns : the intersection over union for the two bounding boxes.
-    """
-    left_side = max(box_a[0], box_b[0])
-    top_side = max(box_a[1], box_b[1])
-    right_side = min(box_a[2], box_b[2])
-    bottom_side = min(box_a[3], box_b[3])
-    if left_side > right_side or top_side > bottom_side:
-        return 0
-    intersection_area = area([left_side, top_side, right_side, bottom_side])
-    iou = intersection_area / float(area(box_b) + area(box_b) - intersection_area)
-    return iou
-
-
-def area(box: List[float]) -> float:
-    """Computes the area of a box."""
-    return (box[2] - box[0]) * (box[3] - box[1])
 
 
 def show_detections(
@@ -311,5 +294,5 @@ def show_detections(
     img = image.copy()
     draw = ImageDraw.Draw(img)
     for box in preds:
-        draw.rectangle(box[:4])
+        draw.rectangle(box.box)
     return img
