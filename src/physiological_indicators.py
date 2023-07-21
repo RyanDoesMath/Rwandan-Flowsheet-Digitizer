@@ -16,7 +16,7 @@ import tiles
 import oxygen_saturation
 from bounding_box import BoundingBox
 
-SINGLE_CHAR_MODEL = YOLO("../models/single_char_pi_detector_yolov8l.pt")
+SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
 CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
 num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
