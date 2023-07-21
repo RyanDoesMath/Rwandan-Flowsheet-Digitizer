@@ -266,7 +266,9 @@ def remove_overlapping_detections(
                 criteria = this_rect.intersection_over_smaller_box(that_rect)
             if criteria > overlap_tolerance:
                 index_to_remove = (
-                    this_ix if this_rect[4] < that_rect[4] else this_ix + that_ix + 1
+                    this_ix
+                    if this_rect.conf < that_rect.conf
+                    else this_ix + that_ix + 1
                 )
                 remove.append(index_to_remove)
     for index in sorted(list(set(remove)), reverse=True):
