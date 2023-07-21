@@ -298,5 +298,5 @@ def show_detections(
     img = image.copy()
     draw = ImageDraw.Draw(img)
     for box in preds:
-        draw.rectangle(box.box)
+        draw.rectangle(box.box, outline="gold")
     return img
