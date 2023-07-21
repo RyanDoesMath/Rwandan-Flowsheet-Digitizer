@@ -17,7 +17,7 @@ def tile_predict(
     stride: float,
     overlap_tolerance: float,
     remove_non_square: bool = False,
-) -> List[List[float]]:
+) -> List[BoundingBox]:
     """Uses a YOLOv8 model to predict on an image using image tiling.
 
     Args :
@@ -110,7 +110,7 @@ def get_y_coords(height: float, rows: int, stride: float):
     ] + [height]
 
 
-def predict_on_tiles(model, tiles) -> List[List[float]]:
+def predict_on_tiles(model, tiles) -> List[List[List[BoundingBox]]]:
     """Uses a YOLOv8 model to predict on image tiles.
 
     Args :
@@ -123,13 +123,25 @@ def predict_on_tiles(model, tiles) -> List[List[float]]:
     for row in tiles:
         new_preds = []
         for tile in row:
-            new_preds.append(model(tile, verbose=False)[0].boxes.data.tolist())
+            new_pred = model(tile, verbose=False)[0].boxes.data.tolist()
+            new_pred = [
+                BoundingBox(
+                    b[0],
+                    b[1],
+                    b[2],
+                    b[3],
+                    b[5],
+                    b[4],
+                )
+                for b in new_pred
+            ]
+            new_preds.append(new_pred)
         predictions.append(new_preds)
     return predictions
 
 
 def reassemble_predictions(
-    tiled_predictions: List[List[float]],
+    tiled_predictions: List[List[List[BoundingBox]]],
     overlap_tolerance: float,
     remove_non_square: bool,
     rows: int,
@@ -137,7 +149,7 @@ def reassemble_predictions(
     width: int,
     height: int,
     stride: float,
-) -> List[List[float]]:
+) -> List[BoundingBox]:
     """Reassembles the tiled predictions into predictions on the full image.
 
     Args :
@@ -163,7 +175,12 @@ def reassemble_predictions(
 
 
 def map_raw_detections_to_full_image(
-    predictions, rows: int, columns: int, width: int, height: int, stride: float
+    predictions: List[List[List[BoundingBox]]],
+    rows: int,
+    columns: int,
+    width: int,
+    height: int,
+    stride: float,
 ):
     """Maps the coordinates of the raw detections to where they are on the full image.
 
@@ -181,7 +198,7 @@ def map_raw_detections_to_full_image(
     mapped_boxes = []
 
     for col_ix, col in enumerate(predictions):
-        for row_ix, row in enumerate(col):
+        for row_ix, box in enumerate(col):
             boxes = row.copy()
             for box in boxes:
                 mapped_boxes.append(
@@ -198,8 +215,8 @@ def map_raw_detections_to_full_image(
 
 
 def remove_non_square_detections(
-    predictions: List[List[float]], threshold: float = 0.5
-) -> List[List[float]]:
+    predictions: List[List[BoundingBox]], threshold: float = 0.5
+) -> List[List[BoundingBox]]:
     """Removes detections that aren't square enough.
 
     Args :
@@ -223,8 +240,8 @@ def remove_non_square_detections(
 
 
 def remove_overlapping_detections(
-    predictions: List[List[float]], overlap_tolerance: float
-) -> List[List[float]]:
+    predictions: List[List[BoundingBox]], overlap_tolerance: float
+) -> List[List[BoundingBox]]:
     """Removes detections that overlap too much.
 
     Args :
