@@ -267,7 +267,7 @@ def remove_overlapping_detections(
             if criteria > overlap_tolerance:
                 index_to_remove = (
                     this_ix
-                    if this_rect.conf < that_rect.conf
+                    if this_rect.confidence < that_rect.confidence
                     else this_ix + that_ix + 1
                 )
                 remove.append(index_to_remove)
