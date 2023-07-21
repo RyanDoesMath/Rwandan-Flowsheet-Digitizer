@@ -6,6 +6,7 @@ worry about the implementation of image tiling."""
 
 from typing import List
 from PIL import ImageDraw
+from bounding_box import BoundingBox
 
 
 def tile_predict(
