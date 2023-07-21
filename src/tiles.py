@@ -17,6 +17,7 @@ def tile_predict(
     stride: float,
     overlap_tolerance: float,
     remove_non_square: bool = False,
+    strategy: str = "iou",
 ) -> List[BoundingBox]:
     """Uses a YOLOv8 model to predict on an image using image tiling.
 
@@ -45,6 +46,7 @@ def tile_predict(
         width,
         height,
         stride,
+        strategy,
     )
     return predictions
 
@@ -149,6 +151,7 @@ def reassemble_predictions(
     width: int,
     height: int,
     stride: float,
+    strategy: str,
 ) -> List[BoundingBox]:
     """Reassembles the tiled predictions into predictions on the full image.
 
@@ -170,7 +173,9 @@ def reassemble_predictions(
     )
     if remove_non_square:
         predictions = remove_non_square_detections(predictions)
-    predictions = remove_overlapping_detections(predictions, overlap_tolerance)
+    predictions = remove_overlapping_detections(
+        predictions, overlap_tolerance, strategy=strategy
+    )
     return predictions
 
 
@@ -244,7 +249,7 @@ def remove_non_square_detections(
 
 
 def remove_overlapping_detections(
-    predictions: List[BoundingBox], overlap_tolerance: float, strategy: str = "iou"
+    predictions: List[BoundingBox], overlap_tolerance: float, strategy: str
 ) -> List[BoundingBox]:
     """Removes detections that overlap too much.
 
@@ -284,6 +289,7 @@ def show_detections(
     stride: float,
     overlap_tolerance: float,
     remove_non_square: bool = False,
+    strategy: str = "iou",
 ):
     """Draws the detections on a PIL image and returns it."""
     preds = tile_predict(
