@@ -557,23 +557,23 @@ def adjust_boxes_for_margins(
     two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
     for det in detections:
         if det.systolic_box is not None:
-            det.systolic_box = [
-                det.systolic_box[0],
-                det.systolic_box[1] - two_hundred_box[3],
-                det.systolic_box[2],
-                det.systolic_box[3] - two_hundred_box[3],
-                det.systolic_box[4],
-                det.systolic_box[5],
-            ]
+            det.systolic_box = BoundingBox(
+                det.systolic_box.left,
+                det.systolic_box.top - two_hundred_box.bottom,
+                det.systolic_box.right,
+                det.systolic_box.bottom - two_hundred_box.bottom,
+                det.systolic_box.predicted_class,
+                det.systolic_box.confidence,
+            )
         if det.diastolic_box is not None:
-            det.diastolic_box = [
-                det.diastolic_box[0],
-                det.diastolic_box[1],  # - two_hundred_box[3],
-                det.diastolic_box[2],
-                det.diastolic_box[3],  # - two_hundred_box[3],
-                det.diastolic_box[4],
-                det.diastolic_box[5],
-            ]
+            det.diastolic_box = BoundingBox(
+                det.diastolic_box.left,
+                det.diastolic_box.top,  # - two_hundred_box[3],
+                det.diastolic_box.right,
+                det.diastolic_box.bottom,  # - two_hundred_box[3],
+                det.diastolic_box.predicted_class,
+                det.diastolic_box.confidence,
+            )
     return detections
 
 
