@@ -227,6 +227,22 @@ def forward_regression(
     return None
 
 
+def backward_regression(
+    t_plus_one: int,
+    t_plus_two: int,
+    t_plus_one_is_plausible: bool = True,
+    t_plus_two_is_plausible: bool = True,
+) -> float:
+    """Performs linear regression with the next two values to try to impute the current one.
+
+    Args :
+        t_plus_one - The next value.
+        t_plus_two - The value after next.
+
+    Returns : An estimated value based on the next two values.
+    """
+
+
 def correct_erroneous_observation(
     observation: OxygenSaturation, forward_estimate: float, backward_estimate: float
 ):
