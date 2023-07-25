@@ -249,9 +249,11 @@ def bb_intersection(box_a, box_b):
 
 def adjust_diastolic_preds(preds: List[BoundingBox], image_height: int):
     """Flips the diastolic predictions back around."""
+    print(preds)
     for box in preds:
         box.bottom = image_height - box.bottom
         box.top = image_height - box.top
+    print(preds)
     return preds
 
 
