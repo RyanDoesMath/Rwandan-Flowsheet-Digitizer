@@ -10,6 +10,7 @@ import numpy as np
 from ultralytics import YOLO
 import tiles
 import deshadow
+from bounding_box import BoundingBox
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
@@ -245,7 +246,7 @@ def bb_intersection(box_a, box_b):
     return area_of_intersection
 
 
-def adjust_diastolic_preds(preds, image_height):
+def adjust_diastolic_preds(preds: List[BoundingBox], image_height: int):
     """Flips the diastolic predictions back around."""
     for box in preds:
         box.bottom = image_height - box.bottom
