@@ -198,10 +198,10 @@ def impute_value_for_erroneous_observations(
             index >= 2 and not observations[index - 2].implausible
         )
         t_plus_one_is_plausible = (
-            index <= len(observations) - 1 and not observations[index + 1].implausible
+            index <= len(observations) - 2 and not observations[index + 1].implausible
         )
         t_plus_two_is_plausible = (
-            index <= len(observations) - 2 and not observations[index + 2].implausible
+            index <= len(observations) - 3 and not observations[index + 2].implausible
         )
         try:
             t_minus_1 = observations[index - 1].percent
