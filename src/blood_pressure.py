@@ -153,9 +153,9 @@ def crop_legend_out(image):
     box_and_class = make_legend_predictions(image)
 
     two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
-    top = two_hundred_box[1]
-    bottom = thirty_box[3]
-    right = max(two_hundred_box[2], thirty_box[2])
+    top = two_hundred_box.top
+    bottom = thirty_box.bottom
+    right = max(two_hundred_box.right, thirty_box.right)
 
     small_offset = 3
     crop = image.crop((right, top, width, bottom + small_offset))
