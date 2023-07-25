@@ -753,5 +753,5 @@ def show_detections(image):
     for box in systolic_pred:
         draw.rectangle(box.box, outline="#fbb584")
     for box in diastolic_pred:
-        draw.rectangle(box.box, outline="#6c799c")
+        draw.rectangle(box.get_box(), outline="#6c799c")
     return img
