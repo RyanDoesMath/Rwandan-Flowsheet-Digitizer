@@ -6,9 +6,6 @@ import warnings
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import deshadow
@@ -18,14 +15,6 @@ from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
-CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
-num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
-CHAR_CLASSIFICATION_MODEL.num_classes = 10
-CHAR_CLASSIFICATION_MODEL.fc = nn.Linear(num_ftrs, 10)
-CHAR_CLASSIFICATION_MODEL.load_state_dict(
-    torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
-)
-CHAR_CLASSIFICATION_MODEL.eval()
 
 
 def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
@@ -189,17 +178,3 @@ def get_values_for_boxes(
     """
     strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
     return strategies[section_name](boxes, image)
-
-
-def classify_image(image: Image.Image):
-    """Uses a CNN to classify a PIL Image."""
-    datatransform = transforms.Compose(
-        [
-            transforms.Resize(size=(40, 40)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
-    input_image = datatransform(image)
-    pred = CHAR_CLASSIFICATION_MODEL(input_image.unsqueeze(0)).tolist()[0]
-    return np.argmax(pred)
