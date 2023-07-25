@@ -14,7 +14,7 @@ class BoundingBox:
     top: int
     right: int
     bottom: int
-    predicted_class: str
+    predicted_class: float
     confidence: float
 
     def intersection_over_union(self, other) -> float:
