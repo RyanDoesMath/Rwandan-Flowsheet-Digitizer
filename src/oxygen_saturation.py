@@ -152,6 +152,11 @@ def flag_jumps_as_implausible(
     So, to 'derate' this threshold, we double it to 8. This is enough to
     catch errors made in the tens place (IE: 89 instead of 99).
     """
+    for index, obs in enumerate(observations):
+        previous_obs = observations[index - 1] if index > 0 else None
+        next_obs = observations[index + 1] if index < len(observations) else None
+        pass
+
     return observations
 
 
