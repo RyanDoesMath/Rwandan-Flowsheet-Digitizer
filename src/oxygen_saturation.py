@@ -174,12 +174,6 @@ def impute_value_for_erroneous_observations(
     range (75, 100), the regression estimation itself is rounded and used.
     """
 
-    def forward_regression(t_minus_1: int, t_minus_2: int) -> float:
-        beta_1 = 0.5904
-        beta_2 = 0.3844
-        intercept = 12.2984
-        return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
-
     for index, obs in enumerate(observations):
         if (
             not obs.implausible
@@ -198,6 +192,21 @@ def impute_value_for_erroneous_observations(
         )
 
     return observations
+
+
+def forward_regression(t_minus_1: int, t_minus_2: int) -> float:
+    """Estimates a value for an SpO2 based on the two previous values.
+
+    Args :
+        t_minus_1 - the last value.
+        t_minus_2 - the value before last.
+
+    Returns: An estimated value based on the previous two values.
+    """
+    beta_1 = 0.5904
+    beta_2 = 0.3844
+    intercept = 12.2984
+    return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
 
 
 def correct_erroneous_observation(
