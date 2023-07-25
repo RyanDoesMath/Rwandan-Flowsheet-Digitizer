@@ -50,7 +50,7 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
     observations = cluster_into_observations(boxes)
     observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
-    # observations = flag_jumps_as_implausible(observations)
+    observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
@@ -149,13 +149,26 @@ def flag_jumps_as_implausible(
         2) The value jumpped from the previous value > 8 percentage points.
 
     Looking through available data, there has never been a jump greater than 4%.
-    So, to 'derate' this threshold, we double it to 8. This is enough to
+    So, to 'derate' this threshold, we increase it to 7%. This is enough to
     catch errors made in the tens place (IE: 89 instead of 99).
     """
     for index, obs in enumerate(observations):
-        previous_obs = observations[index - 1] if index > 0 else None
-        next_obs = observations[index + 1] if index < len(observations) else None
-        pass
+        if index == 0 or index == len(observations) - 1:
+            continue
+        previous_obs = observations[index - 1]
+        next_obs = observations[index + 1]
+
+        jump_to_next = (
+            abs(obs.percent - next_obs.percent) if not next_obs.implausible else 0
+        )
+        jump_from_last = (
+            abs(obs.percent - previous_obs.percent)
+            if not previous_obs.implausible
+            else 0
+        )
+
+        if (jump_to_next + jump_from_last) / 2 > 7:
+            obs.implausible = True
 
     return observations
 
@@ -178,36 +191,32 @@ def impute_value_for_erroneous_observations(
         if not obs.implausible:
             continue
 
-        t_minus_one_is_plausible = (
-            index >= 1 and not observations[index - 1].implausible
-        )
-        t_minus_two_is_plausible = (
-            index >= 2 and not observations[index - 2].implausible
-        )
-        t_plus_one_is_plausible = (
-            index <= len(observations) - 1 and not observations[index + 1].implausible
-        )
-        t_plus_two_is_plausible = (
-            index <= len(observations) - 2 and not observations[index + 2].implausible
-        )
         try:
+            t_minus_one_is_plausible = not observations[index - 1].implausible
             t_minus_1 = observations[index - 1].percent
         except IndexError:
+            t_minus_one_is_plausible = False
             t_minus_1 = 0
 
         try:
+            t_minus_two_is_plausible = not observations[index - 2].implausible
             t_minus_2 = observations[index - 2].percent
         except IndexError:
+            t_minus_two_is_plausible = False
             t_minus_2 = 0
 
         try:
+            t_plus_one_is_plausible = not observations[index + 1].implausible
             t_plus_1 = observations[index + 1].percent
         except IndexError:
+            t_plus_one_is_plausible = False
             t_plus_1 = 0
 
         try:
+            t_plus_two_is_plausible = not observations[index + 2].implausible
             t_plus_2 = observations[index + 2].percent
         except IndexError:
+            t_minus_two_is_plausible = False
             t_plus_2 = 0
 
         forward_estimate = forward_regression(
