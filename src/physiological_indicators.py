@@ -14,7 +14,7 @@ import oxygen_saturation
 from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
-PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 4, "COLUMNS": 17, "STRIDE": 1 / 2}
+PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
 
 def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
