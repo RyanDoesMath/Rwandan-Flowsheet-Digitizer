@@ -35,7 +35,9 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["COLUMNS"],
         PHYSIOLOGICAL_INDICATOR_TILE_DATA["STRIDE"],
         0.5,
+        strategy="not_iou",
     )
+
     predictions = [
         BoundingBox(l, t, r, b, co, cl) for l, t, r, b, cl, co in predictions
     ]
