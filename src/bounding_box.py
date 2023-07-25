@@ -17,15 +17,6 @@ class BoundingBox:
     predicted_class: str
     confidence: float
 
-    def __post_init__(self):
-        """Inits variables that depend on the four constructor variables."""
-        self.width = self.right - self.left
-        self.height = self.bottom - self.top
-        self.x_center = self.left + (self.width / 2)
-        self.y_center = self.top + (self.height / 2)
-        self.area = (self.right - self.left) * (self.bottom - self.top)
-        self.box = self.get_box()
-
     def intersection_over_union(self, other) -> float:
         """Computes the intersection over union of the two bounding boxes."""
         intersection_left, intersection_right = max((self.left, other.left)), min(
@@ -69,4 +60,25 @@ class BoundingBox:
         return 0
 
     def get_box(self):
+        """Gets the 4 coordinate box for this BoundingBox."""
         return [self.left, self.top, self.right, self.bottom]
+
+    def get_x_center(self):
+        """Gets the x center for the box."""
+        return self.left + (self.width / 2)
+
+    def get_y_center(self):
+        """Gets the y center for the box."""
+        return self.top + (self.height / 2)
+
+    def get_width(self):
+        """Gets the width for the box."""
+        return self.right - self.left
+
+    def get_height(self):
+        """Gets the height for the box."""
+        return self.bottom - self.top
+
+    def get_area(self):
+        """Gets the area for the box."""
+        return (self.get_width()) * (self.get_height())

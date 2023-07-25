@@ -28,8 +28,8 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    systolic_box: List[float] = None
-    diastolic_box: List[float] = None
+    systolic_box: BoundingBox = None
+    diastolic_box: BoundingBox = None
     systolic: int = None
     diastolic: int = None
     timestamp: int = None
@@ -37,17 +37,14 @@ class BloodPressure:
     def get_box_x_center(self, box_type: str) -> float:
         """Computes the x center of the systolic box."""
 
-        def compute_box_center(box):
-            return box[2] + (box[2] - box[0]) / 2
-
         if box_type == "systolic":
             if self.systolic_box is not None:
-                return compute_box_center(self.systolic_box)
+                return self.systolic_box.get_x_center()
             else:
                 return None
         if box_type == "diastolic" and self.diastolic_box is not None:
             if self.diastolic_box is not None:
-                return compute_box_center(self.diastolic_box)
+                return self.diastolic_box.get_x_center()
             else:
                 return None
         raise ValueError(f"BloodPressure doesn't have a box called {box_type}")
@@ -224,29 +221,6 @@ def get_twohundred_and_thirty_box(
     return two_hundred_box, thirty_box
 
 
-def bb_intersection(box_a, box_b):
-    """Finds the bounding box intersection for two rectangles.
-
-    Parameters:
-        boxA - A tuple containing the box's data (xmin, ymax, xmax, ymin)
-        boxB - A tuple containing the box's data (xmin, ymax, xmax, ymin)
-
-    Returns: The area of intersection for the two bounding boxes.
-    """
-    # determine the (x, y)-coordinates of the intersection rectangle
-    left = max(box_a[0], box_b[0])
-    bottom = max(box_a[1], box_b[1])
-    right = min(box_a[2], box_b[2])
-    top = min(box_a[3], box_b[3])
-
-    if left >= right and bottom >= top:
-        return 0
-
-    # compute the area of intersection rectangle
-    area_of_intersection = (right - left) * (top - bottom)
-    return area_of_intersection
-
-
 def adjust_diastolic_preds(preds: List[BoundingBox], image_height: int):
     """Flips the diastolic predictions back around."""
     for box in preds:
@@ -273,9 +247,6 @@ def find_bp_value_for_bbox(
         A list of predicted values to put into a column of the dataframe.
     """
 
-    def compute_box_y_center(box: List[float]):
-        return int(round(box[3] + (box[3] - box[1]) / 2, 0))
-
     cropped_image = crop_legend_out(image)
     cropped_image = cropped_image.crop(
         [0, 0, cropped_image.width // 6, cropped_image.height]
@@ -286,14 +257,10 @@ def find_bp_value_for_bbox(
         has_systolic = blood_pressure.systolic_box is not None
         has_diastolic = blood_pressure.diastolic_box is not None
         if has_systolic:
-            blood_pressure_sys_center = compute_box_y_center(
-                blood_pressure.systolic_box
-            )
+            blood_pressure_sys_center = blood_pressure.systolic_box.get_y_center()
             blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
         if has_diastolic:
-            blood_pressure_dia_center = compute_box_y_center(
-                blood_pressure.diastolic_box
-            )
+            blood_pressure_dia_center = blood_pressure.diastolic_box.get_y_center()
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
@@ -723,24 +690,20 @@ def timestamp_blood_pressures(
     Returns : the blood pressure structs with timestamps.
     """
 
-    def compute_box_x_center(box: List[float]):
-        return box[2] + (box[2] - box[0])
-
     def average_x_coord(blood_pressure: BloodPressure) -> float:
         no_systolic_box = blood_pressure.systolic_box is None
         no_diastolic_box = blood_pressure.diastolic_box is None
         if no_systolic_box:
-            return compute_box_x_center(blood_pressure.diastolic_box)
+            return blood_pressure.diastolic_box.get_x_center()
         if no_diastolic_box:
-            return compute_box_x_center(blood_pressure.systolic_box)
-        sys_x_center = compute_box_x_center(blood_pressure.systolic_box)
-        dia_x_center = compute_box_x_center(blood_pressure.diastolic_box)
+            return blood_pressure.systolic_box.get_x_center()
+        sys_x_center = blood_pressure.systolic_box.get_x_center()
+        dia_x_center = blood_pressure.diastolic_box.get_x_center()
         return (sys_x_center + dia_x_center) / 2
 
     stamped_bps = sorted(blood_pressures, key=average_x_coord)
     for index, blood_pressure in enumerate(stamped_bps):
         blood_pressure.timestamp = index * 5
-    # stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
     return stamped_bps
 
 
@@ -751,7 +714,7 @@ def show_detections(image):
     systolic_pred, diastolic_pred = make_detections(img)
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
-        draw.rectangle(box.box, outline="#fbb584")
+        draw.rectangle(box.get_box(), outline="#fbb584")
     for box in diastolic_pred:
         draw.rectangle(box.get_box(), outline="#6c799c")
     return img
