@@ -257,10 +257,14 @@ def find_bp_value_for_bbox(
         has_systolic = blood_pressure.systolic_box is not None
         has_diastolic = blood_pressure.diastolic_box is not None
         if has_systolic:
-            blood_pressure_sys_center = blood_pressure.systolic_box.get_y_center()
+            blood_pressure_sys_center = int(
+                round(blood_pressure.systolic_box.get_y_center(), 0)
+            )
             blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
         if has_diastolic:
-            blood_pressure_dia_center = blood_pressure.diastolic_box.get_y_center()
+            blood_pressure_dia_center = int(
+                round(blood_pressure.diastolic_box.get_y_center(), 0)
+            )
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
