@@ -11,9 +11,9 @@ from ultralytics import YOLO
 import tiles
 import deshadow
 
-BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8m.pt")
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
-BP_TILE_DATA = {"ROWS": 6, "COLUMNS": 17, "STRIDE": 1 / 2}
+BP_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
 
 @dataclass
