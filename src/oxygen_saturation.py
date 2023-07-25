@@ -50,7 +50,7 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
     observations = cluster_into_observations(boxes)
     observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
-    # observations = flag_jumps_as_implausible(observations)
+    observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
@@ -153,9 +153,22 @@ def flag_jumps_as_implausible(
     catch errors made in the tens place (IE: 89 instead of 99).
     """
     for index, obs in enumerate(observations):
-        previous_obs = observations[index - 1] if index > 0 else None
-        next_obs = observations[index + 1] if index < len(observations) else None
-        pass
+        if index == 0 or index == len(observations) - 1:
+            continue
+        previous_obs = observations[index - 1]
+        next_obs = observations[index + 1]
+
+        jump_to_next = (
+            abs(obs.percent - next_obs.percent) if not next_obs.implausible else 0
+        )
+        jump_from_last = (
+            abs(obs.percent - previous_obs.percent)
+            if not previous_obs.implausible
+            else 0
+        )
+
+        if (jump_to_next + jump_from_last) / 2 > 8:
+            obs.implausible = True
 
     return observations
 
