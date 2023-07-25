@@ -192,53 +192,31 @@ def impute_value_for_erroneous_observations(
             continue
 
         try:
-            t_minus_one_is_plausible = (
-                index >= 1 and not observations[index - 1].implausible
-            )
-        except IndexError:
-            t_minus_one_is_plausible = True
-
-        try:
-            t_minus_two_is_plausible = (
-                index >= 2 and not observations[index - 2].implausible
-            )
-        except IndexError:
-            t_minus_two_is_plausible = True
-
-        try:
-            t_plus_one_is_plausible = (
-                index <= len(observations) - 2
-                and not observations[index + 1].implausible
-            )
-        except IndexError:
-            t_plus_one_is_plausible = True
-
-        try:
-            t_plus_two_is_plausible = (
-                index <= len(observations) - 3
-                and not observations[index + 2].implausible
-            )
-        except IndexError:
-            t_minus_two_is_plausible = True
-
-        try:
+            t_minus_one_is_plausible = not observations[index - 1].implausible
             t_minus_1 = observations[index - 1].percent
         except IndexError:
+            t_minus_one_is_plausible = False
             t_minus_1 = 0
 
         try:
+            t_minus_two_is_plausible = not observations[index - 2].implausible
             t_minus_2 = observations[index - 2].percent
         except IndexError:
+            t_minus_two_is_plausible = False
             t_minus_2 = 0
 
         try:
+            t_plus_one_is_plausible = not observations[index + 1].implausible
             t_plus_1 = observations[index + 1].percent
         except IndexError:
+            t_plus_one_is_plausible = False
             t_plus_1 = 0
 
         try:
+            t_plus_two_is_plausible = not observations[index + 2].implausible
             t_plus_2 = observations[index + 2].percent
         except IndexError:
+            t_minus_two_is_plausible = True
             t_plus_2 = 0
 
         forward_estimate = forward_regression(
