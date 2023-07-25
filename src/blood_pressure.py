@@ -118,8 +118,8 @@ def remove_legend_predictions(
     """
     box_and_class = make_legend_predictions(image)
     two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
-    sys_pred = list(filter(lambda box: box[0] > two_hundred_box[2], sys_pred))
-    dia_pred = list(filter(lambda box: box[0] > two_hundred_box[2], dia_pred))
+    sys_pred = list(filter(lambda box: box.left > two_hundred_box.right, sys_pred))
+    dia_pred = list(filter(lambda box: box.left > two_hundred_box.right, dia_pred))
     return sys_pred, dia_pred
 
 
@@ -179,6 +179,9 @@ def make_legend_predictions(image) -> List[List[float]]:
 
     preds = TWOHUNDRED_THIRTY_MODEL(crop, verbose=False)
     box_and_class = preds[0].boxes.data.tolist()
+    box_and_class = [
+        BoundingBox(b[0], b[1], b[2], b[3], b[5], b[4]) for b in box_and_class
+    ]
 
     return box_and_class
 
