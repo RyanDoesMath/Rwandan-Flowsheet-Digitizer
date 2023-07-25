@@ -252,6 +252,9 @@ def find_bp_value_for_bbox(
         [0, 0, cropped_image.width // 6, cropped_image.height]
     )
     horizontal_lines = extract_horizontal_lines(cropped_image)
+    blood_pressure_predictions = adjust_boxes_for_margins(
+        image, blood_pressure_predictions
+    )
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
         has_systolic = blood_pressure.systolic_box is not None
@@ -268,9 +271,7 @@ def find_bp_value_for_bbox(
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
-    blood_pressure_predictions = adjust_boxes_for_margins(
-        image, blood_pressure_predictions
-    )
+
     return blood_pressure_predictions
 
 
