@@ -253,7 +253,7 @@ def forward_regression(
         intercept = 23.42
         return intercept + t_minus_2 * beta_2
 
-    return None
+    return np.nan
 
 
 def backward_regression(
@@ -286,13 +286,15 @@ def backward_regression(
         intercept = 24.1745
         return intercept + t_plus_two * beta_2
 
+    return np.nan
+
 
 def correct_erroneous_observation(
     observation: OxygenSaturation, forward_estimate: float, backward_estimate: float
 ):
     """Corrects a single erroneous observation."""
     observation = remove_until_length_three(observation)
-    estimate = np.mean([forward_estimate, backward_estimate])
+    estimate = np.nanmean([forward_estimate, backward_estimate])
     possible_correct_values = []
     current_prediction = "".join([str(x) for x in observation.chars])
     for val in range(75, 101):
