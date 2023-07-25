@@ -194,7 +194,12 @@ def impute_value_for_erroneous_observations(
     return observations
 
 
-def forward_regression(t_minus_1: int, t_minus_2: int) -> float:
+def forward_regression(
+    t_minus_1: int,
+    t_minus_2: int,
+    t_minus_1_is_plausible: bool = True,
+    t_minus_2_is_plausible: bool = True,
+) -> float:
     """Estimates a value for an SpO2 based on the two previous values.
 
     Args :
@@ -203,10 +208,23 @@ def forward_regression(t_minus_1: int, t_minus_2: int) -> float:
 
     Returns: An estimated value based on the previous two values.
     """
-    beta_1 = 0.5904
-    beta_2 = 0.3844
-    intercept = 12.2984
-    return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
+    if t_minus_1_is_plausible and t_minus_2_is_plausible:
+        beta_1 = 0.5904
+        beta_2 = 0.2844
+        intercept = 12.2984
+        return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
+
+    if t_minus_1_is_plausible:
+        beta_1 = 0.8331
+        intercept = 16.3866
+        return intercept + t_minus_1 * beta_1
+
+    if t_minus_2_is_plausible:
+        beta_2 = 0.7616
+        intercept = 23.42
+        return intercept + t_minus_2 * beta_2
+
+    return None
 
 
 def correct_erroneous_observation(
