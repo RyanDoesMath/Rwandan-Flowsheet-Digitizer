@@ -216,7 +216,7 @@ def impute_value_for_erroneous_observations(
             t_plus_two_is_plausible = not observations[index + 2].implausible
             t_plus_2 = observations[index + 2].percent
         except IndexError:
-            t_minus_two_is_plausible = True
+            t_minus_two_is_plausible = False
             t_plus_2 = 0
 
         forward_estimate = forward_regression(
