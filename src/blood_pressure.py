@@ -615,25 +615,17 @@ def get_matches(
         return ([], [])
     if no_systolic_detections:
         return (
-            dists,
             [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
         )
     if no_diastolic_detections:
         return (
-            dists,
             [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
         )
-
-    def compute_box_center(box):
-        return box[2] + (box[2] - box[0]) / 2
-
-    def distance_between_box_centers(box_1, box_2):
-        return abs(compute_box_center(box_1) - compute_box_center(box_2))
 
     matches = []
     for sys_index, sys_box in enumerate(bp_bounding_boxes["systolic"]):
         distance_to_diastolics = [
-            (dia_index, distance_between_box_centers(sys_box, dia_box))
+            (dia_index, abs(sys_box.get_x_center() - dia_box.get_x_center()))
             for dia_index, dia_box in enumerate(bp_bounding_boxes["diastolic"])
         ]
         distance_to_diastolics = list(
