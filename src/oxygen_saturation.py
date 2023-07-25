@@ -61,7 +61,7 @@ def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox
     lower_lim = len(boxes) // 3 - int(0.2 * len(boxes) // 3)
     upper_lim = len(boxes) // 2 + int(0.2 * len(boxes) // 2)
 
-    x_centers = [box.x_center for box in boxes]
+    x_centers = [box.get_x_center() for box in boxes]
     x_centers = np.array(x_centers).reshape(-1, 1)
 
     scores = {}
@@ -91,7 +91,7 @@ def predict_values(
         cluster_chars = []
         cluster_boxes = []
         for bbox in cluster:
-            single_char_img = image.crop(bbox.box)
+            single_char_img = image.crop(bbox.get_box())
             number = classify_image(single_char_img)
             cluster_chars.append(number)
             cluster_boxes.append(bbox)
