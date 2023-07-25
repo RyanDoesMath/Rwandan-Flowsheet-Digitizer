@@ -248,8 +248,8 @@ def bb_intersection(box_a, box_b):
 def adjust_diastolic_preds(preds, image_height):
     """Flips the diastolic predictions back around."""
     for box in preds:
-        box[3] = image_height - box[3]
-        box[1] = image_height - box[1]
+        box.bottom = image_height - box.bottom
+        box.top = image_height - box.top
     return preds
 
 
