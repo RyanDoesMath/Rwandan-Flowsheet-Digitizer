@@ -60,7 +60,7 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     preprocessed_image = preprocess_image(image)
-    cropped_width = crop_legend_out(image).size[0]
+    cropped_width = crop_legend_out(preprocessed_image).size[0]
     systolic_pred, diastolic_pred = make_detections(preprocessed_image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
@@ -159,7 +159,7 @@ def crop_legend_out(image):
     return crop
 
 
-def make_legend_predictions(image) -> List[List[float]]:
+def make_legend_predictions(image) -> List[BoundingBox]:
     """Predicts where 200 and 30 are on the image.
 
     This function first crops out the rightmost four fifths of the image.
@@ -184,7 +184,7 @@ def make_legend_predictions(image) -> List[List[float]]:
 
 
 def get_twohundred_and_thirty_box(
-    box_and_class: List[List[float]],
+    box_and_class: List[BoundingBox],
 ) -> Tuple[List[float], List[float]]:
     """From the predictions, returns the twohundred box and thirty box.
 
