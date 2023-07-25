@@ -300,6 +300,7 @@ def show_detections(
         stride=stride,
         overlap_tolerance=overlap_tolerance,
         remove_non_square=remove_non_square,
+        strategy=strategy,
     )
     img = image.copy()
     draw = ImageDraw.Draw(img)
