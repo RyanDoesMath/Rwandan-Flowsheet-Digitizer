@@ -60,7 +60,7 @@ def cluster_into_rows(
     """
     warnings.filterwarnings("ignore")
 
-    y_centers = [bb.y_center for bb in predictions]
+    y_centers = [bb.get_y_center() for bb in predictions]
     y_centers = np.array(y_centers).reshape(-1, 1)
     best_cluster_value = find_number_of_rows(predictions, im_height)
     clusters = get_clusters(predictions, best_cluster_value, y_centers)
@@ -80,7 +80,7 @@ def find_number_of_rows(predictions: List[BoundingBox], im_height: int) -> int:
     if has_one_cluster:
         best_cluster_value = 1
     else:
-        y_centers = [bb.y_center for bb in predictions]
+        y_centers = [bb.get_y_center() for bb in predictions]
         scores = compute_silhouette_scores(y_centers)
         best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
 
@@ -111,7 +111,7 @@ def check_if_section_has_only_one_row(
     difference between the max and min value is less than 10%, it is very likely
     there is only one row.
     """
-    y_centers = [bb.y_center for bb in predictions]
+    y_centers = [bb.get_y_center() for bb in predictions]
     max_val = max(y_centers)
     min_val = min(y_centers)
     max_allowable_diff = 0.1 * im_height
