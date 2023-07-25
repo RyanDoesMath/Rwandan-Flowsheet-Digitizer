@@ -660,7 +660,7 @@ def get_matches(
         - {tup[1] for tup in matches}
     )
     dia_non_matches = [
-        BloodPressure(systolic_box=bp_bounding_boxes["diastolic"][index])
+        BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][index])
         for index in dia_non_matches
     ]
     non_matches = sys_non_matches + dia_non_matches
