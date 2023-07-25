@@ -241,6 +241,21 @@ def backward_regression(
 
     Returns : An estimated value based on the next two values.
     """
+    if t_plus_one_is_plausible and t_plus_two_is_plausible:
+        beta_1 = 0.5952
+        beta_2 = 0.2686
+        intercept = 13.3739
+        return intercept + t_plus_one * beta_1 + t_plus_two * beta_2
+
+    if t_plus_one_is_plausible:
+        beta_1 = 0.8149
+        intercept = 18.1468
+        return intercept + t_plus_one * beta_1
+
+    if t_plus_two_is_plausible:
+        beta_2 = 0.7536
+        intercept = 24.1745
+        return intercept + t_plus_two * beta_2
 
 
 def correct_erroneous_observation(
