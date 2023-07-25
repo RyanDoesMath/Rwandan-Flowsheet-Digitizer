@@ -8,10 +8,21 @@ from functools import lru_cache
 import warnings
 from PIL import Image
 import numpy as np
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
-from physiological_indicators import classify_image
+
+CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
+num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
+CHAR_CLASSIFICATION_MODEL.num_classes = 10
+CHAR_CLASSIFICATION_MODEL.fc = nn.Linear(num_ftrs, 10)
+CHAR_CLASSIFICATION_MODEL.load_state_dict(
+    torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
+)
+CHAR_CLASSIFICATION_MODEL.eval()
 
 
 @dataclass
@@ -93,6 +104,20 @@ def predict_values(
         )
         values.append(obs)
     return values
+
+
+def classify_image(image: Image.Image):
+    """Uses a CNN to classify a PIL Image."""
+    datatransform = transforms.Compose(
+        [
+            transforms.Resize(size=(40, 40)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+    input_image = datatransform(image)
+    pred = CHAR_CLASSIFICATION_MODEL(input_image.unsqueeze(0)).tolist()[0]
+    return np.argmax(pred)
 
 
 def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSaturation]:
