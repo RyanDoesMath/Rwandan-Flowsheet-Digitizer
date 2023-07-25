@@ -559,9 +559,9 @@ def adjust_boxes_for_margins(
         if det.systolic_box is not None:
             det.systolic_box = BoundingBox(
                 det.systolic_box.left,
-                det.systolic_box.top - two_hundred_box.bottom,
+                det.systolic_box.top + two_hundred_box.bottom,
                 det.systolic_box.right,
-                det.systolic_box.bottom - two_hundred_box.bottom,
+                det.systolic_box.bottom + two_hundred_box.bottom,
                 det.systolic_box.predicted_class,
                 det.systolic_box.confidence,
             )
