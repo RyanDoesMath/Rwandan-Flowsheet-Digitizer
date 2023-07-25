@@ -556,7 +556,6 @@ def adjust_boxes_for_margins(
     """
     box_and_class = make_legend_predictions(image)
     two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
-    print(two_hundred_box)
     for det in detections:
         if det.systolic_box is not None:
             det.systolic_box = BoundingBox(
