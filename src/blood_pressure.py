@@ -203,22 +203,20 @@ def get_twohundred_and_thirty_box(
     """
     two_hundred = 0.0
     thirty = 1.0
-    index_of_confidence = 4
-    index_of_class = 5
 
     two_hundred_boxes = list(
-        filter(lambda bnc: bnc[index_of_class] == two_hundred, box_and_class)
+        filter(lambda bnc: bnc.predicted_class == two_hundred, box_and_class)
     )
     thirty_boxes = list(
-        filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
+        filter(lambda bnc: bnc.predicted_class == thirty, box_and_class)
     )
     if len(two_hundred_boxes) == 0:
         raise ValueError("No detection for 200 on the legend.")
     if len(thirty_boxes) == 0:
         raise ValueError("No detection for 30 on the legend.")
 
-    two_hundred_boxes.sort(key=lambda box: box[index_of_confidence])
-    thirty_boxes.sort(key=lambda box: box[index_of_confidence])
+    two_hundred_boxes.sort(key=lambda box: box.confidence)
+    thirty_boxes.sort(key=lambda box: box.confidence)
 
     two_hundred_box = two_hundred_boxes[0]
     thirty_box = thirty_boxes[0]
