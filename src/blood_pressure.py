@@ -10,6 +10,7 @@ import numpy as np
 from ultralytics import YOLO
 import tiles
 import deshadow
+from bounding_box import BoundingBox
 
 BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
@@ -27,8 +28,8 @@ class BloodPressure:
         timestamp - The timestamp.
     """
 
-    systolic_box: List[float] = None
-    diastolic_box: List[float] = None
+    systolic_box: BoundingBox = None
+    diastolic_box: BoundingBox = None
     systolic: int = None
     diastolic: int = None
     timestamp: int = None
@@ -36,17 +37,14 @@ class BloodPressure:
     def get_box_x_center(self, box_type: str) -> float:
         """Computes the x center of the systolic box."""
 
-        def compute_box_center(box):
-            return box[2] + (box[2] - box[0]) / 2
-
         if box_type == "systolic":
             if self.systolic_box is not None:
-                return compute_box_center(self.systolic_box)
+                return self.systolic_box.get_x_center()
             else:
                 return None
         if box_type == "diastolic" and self.diastolic_box is not None:
             if self.diastolic_box is not None:
-                return compute_box_center(self.diastolic_box)
+                return self.diastolic_box.get_x_center()
             else:
                 return None
         raise ValueError(f"BloodPressure doesn't have a box called {box_type}")
@@ -62,11 +60,11 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     preprocessed_image = preprocess_image(image)
-    cropped_width = crop_legend_out(image).size[0]
+    cropped_width = crop_legend_out(preprocessed_image).size[0]
     systolic_pred, diastolic_pred = make_detections(preprocessed_image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
-    bp_pred = find_bp_value_for_bbox(image, bp_pred)
+    bp_pred = find_bp_value_for_bbox(preprocessed_image, bp_pred)
     return bp_pred
 
 
@@ -117,8 +115,8 @@ def remove_legend_predictions(
     """
     box_and_class = make_legend_predictions(image)
     two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
-    sys_pred = list(filter(lambda box: box[0] > two_hundred_box[2], sys_pred))
-    dia_pred = list(filter(lambda box: box[0] > two_hundred_box[2], dia_pred))
+    sys_pred = list(filter(lambda box: box.left > two_hundred_box.right, sys_pred))
+    dia_pred = list(filter(lambda box: box.left > two_hundred_box.right, dia_pred))
     return sys_pred, dia_pred
 
 
@@ -152,16 +150,16 @@ def crop_legend_out(image):
     box_and_class = make_legend_predictions(image)
 
     two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
-    top = two_hundred_box[1]
-    bottom = thirty_box[3]
-    right = max(two_hundred_box[2], thirty_box[2])
+    top = two_hundred_box.top
+    bottom = thirty_box.bottom
+    right = max(two_hundred_box.right, thirty_box.right)
 
     small_offset = 3
     crop = image.crop((right, top, width, bottom + small_offset))
     return crop
 
 
-def make_legend_predictions(image) -> List[List[float]]:
+def make_legend_predictions(image) -> List[BoundingBox]:
     """Predicts where 200 and 30 are on the image.
 
     This function first crops out the rightmost four fifths of the image.
@@ -178,12 +176,15 @@ def make_legend_predictions(image) -> List[List[float]]:
 
     preds = TWOHUNDRED_THIRTY_MODEL(crop, verbose=False)
     box_and_class = preds[0].boxes.data.tolist()
+    box_and_class = [
+        BoundingBox(b[0], b[1], b[2], b[3], b[5], b[4]) for b in box_and_class
+    ]
 
     return box_and_class
 
 
 def get_twohundred_and_thirty_box(
-    box_and_class: List[List[float]],
+    box_and_class: List[BoundingBox],
 ) -> Tuple[List[float], List[float]]:
     """From the predictions, returns the twohundred box and thirty box.
 
@@ -199,22 +200,20 @@ def get_twohundred_and_thirty_box(
     """
     two_hundred = 0.0
     thirty = 1.0
-    index_of_confidence = 4
-    index_of_class = 5
 
     two_hundred_boxes = list(
-        filter(lambda bnc: bnc[index_of_class] == two_hundred, box_and_class)
+        filter(lambda bnc: bnc.predicted_class == two_hundred, box_and_class)
     )
     thirty_boxes = list(
-        filter(lambda bnc: bnc[index_of_class] == thirty, box_and_class)
+        filter(lambda bnc: bnc.predicted_class == thirty, box_and_class)
     )
     if len(two_hundred_boxes) == 0:
         raise ValueError("No detection for 200 on the legend.")
     if len(thirty_boxes) == 0:
         raise ValueError("No detection for 30 on the legend.")
 
-    two_hundred_boxes.sort(key=lambda box: box[index_of_confidence])
-    thirty_boxes.sort(key=lambda box: box[index_of_confidence])
+    two_hundred_boxes.sort(key=lambda box: box.confidence)
+    thirty_boxes.sort(key=lambda box: box.confidence)
 
     two_hundred_box = two_hundred_boxes[0]
     thirty_box = thirty_boxes[0]
@@ -222,34 +221,11 @@ def get_twohundred_and_thirty_box(
     return two_hundred_box, thirty_box
 
 
-def bb_intersection(box_a, box_b):
-    """Finds the bounding box intersection for two rectangles.
-
-    Parameters:
-        boxA - A tuple containing the box's data (xmin, ymax, xmax, ymin)
-        boxB - A tuple containing the box's data (xmin, ymax, xmax, ymin)
-
-    Returns: The area of intersection for the two bounding boxes.
-    """
-    # determine the (x, y)-coordinates of the intersection rectangle
-    left = max(box_a[0], box_b[0])
-    bottom = max(box_a[1], box_b[1])
-    right = min(box_a[2], box_b[2])
-    top = min(box_a[3], box_b[3])
-
-    if left >= right and bottom >= top:
-        return 0
-
-    # compute the area of intersection rectangle
-    area_of_intersection = (right - left) * (top - bottom)
-    return area_of_intersection
-
-
-def adjust_diastolic_preds(preds, image_height):
+def adjust_diastolic_preds(preds: List[BoundingBox], image_height: int):
     """Flips the diastolic predictions back around."""
     for box in preds:
-        box[3] = image_height - box[3]
-        box[1] = image_height - box[1]
+        box.bottom = image_height - box.bottom
+        box.top = image_height - box.top
     return preds
 
 
@@ -271,33 +247,31 @@ def find_bp_value_for_bbox(
         A list of predicted values to put into a column of the dataframe.
     """
 
-    def compute_box_y_center(box: List[float]):
-        return int(round(box[3] + (box[3] - box[1]) / 2, 0))
-
     cropped_image = crop_legend_out(image)
     cropped_image = cropped_image.crop(
         [0, 0, cropped_image.width // 6, cropped_image.height]
     )
     horizontal_lines = extract_horizontal_lines(cropped_image)
+    blood_pressure_predictions = adjust_boxes_for_margins(
+        image, blood_pressure_predictions
+    )
     bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
         has_systolic = blood_pressure.systolic_box is not None
         has_diastolic = blood_pressure.diastolic_box is not None
         if has_systolic:
-            blood_pressure_sys_center = compute_box_y_center(
-                blood_pressure.systolic_box
+            blood_pressure_sys_center = int(
+                round(blood_pressure.systolic_box.get_y_center(), 0)
             )
             blood_pressure.systolic = bp_values_for_y_pixel[blood_pressure_sys_center]
         if has_diastolic:
-            blood_pressure_dia_center = compute_box_y_center(
-                blood_pressure.diastolic_box
+            blood_pressure_dia_center = int(
+                round(blood_pressure.diastolic_box.get_y_center(), 0)
             )
             blood_pressure.diastolic = bp_values_for_y_pixel[blood_pressure_dia_center]
         if not has_systolic and not has_diastolic:
             warnings.warn("Box has no systolic or distolic prediction.")
-    blood_pressure_predictions = adjust_boxes_for_margins(
-        image, blood_pressure_predictions
-    )
+
     return blood_pressure_predictions
 
 
@@ -584,23 +558,23 @@ def adjust_boxes_for_margins(
     two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
     for det in detections:
         if det.systolic_box is not None:
-            det.systolic_box = [
-                det.systolic_box[0],
-                det.systolic_box[1] - two_hundred_box[3],
-                det.systolic_box[2],
-                det.systolic_box[3] - two_hundred_box[3],
-                det.systolic_box[4],
-                det.systolic_box[5],
-            ]
+            det.systolic_box = BoundingBox(
+                det.systolic_box.left,
+                det.systolic_box.top - two_hundred_box.top,
+                det.systolic_box.right,
+                det.systolic_box.bottom - two_hundred_box.top,
+                det.systolic_box.predicted_class,
+                det.systolic_box.confidence,
+            )
         if det.diastolic_box is not None:
-            det.diastolic_box = [
-                det.diastolic_box[0],
-                det.diastolic_box[1],  # - two_hundred_box[3],
-                det.diastolic_box[2],
-                det.diastolic_box[3],  # - two_hundred_box[3],
-                det.diastolic_box[4],
-                det.diastolic_box[5],
-            ]
+            det.diastolic_box = BoundingBox(
+                det.diastolic_box.left,
+                det.diastolic_box.top - two_hundred_box.top,
+                det.diastolic_box.right,
+                det.diastolic_box.bottom - two_hundred_box.top,
+                det.diastolic_box.predicted_class,
+                det.diastolic_box.confidence,
+            )
     return detections
 
 
@@ -646,25 +620,17 @@ def get_matches(
         return ([], [])
     if no_systolic_detections:
         return (
-            dists,
             [BloodPressure(diastolic_box=db) for db in bp_bounding_boxes["diastolic"]],
         )
     if no_diastolic_detections:
         return (
-            dists,
             [BloodPressure(systolic_box=sb) for sb in bp_bounding_boxes["systolic"]],
         )
-
-    def compute_box_center(box):
-        return box[2] + (box[2] - box[0]) / 2
-
-    def distance_between_box_centers(box_1, box_2):
-        return abs(compute_box_center(box_1) - compute_box_center(box_2))
 
     matches = []
     for sys_index, sys_box in enumerate(bp_bounding_boxes["systolic"]):
         distance_to_diastolics = [
-            (dia_index, distance_between_box_centers(sys_box, dia_box))
+            (dia_index, abs(sys_box.get_x_center() - dia_box.get_x_center()))
             for dia_index, dia_box in enumerate(bp_bounding_boxes["diastolic"])
         ]
         distance_to_diastolics = list(
@@ -695,7 +661,7 @@ def get_matches(
         - {tup[1] for tup in matches}
     )
     dia_non_matches = [
-        BloodPressure(systolic_box=bp_bounding_boxes["diastolic"][index])
+        BloodPressure(diastolic_box=bp_bounding_boxes["diastolic"][index])
         for index in dia_non_matches
     ]
     non_matches = sys_non_matches + dia_non_matches
@@ -721,24 +687,20 @@ def timestamp_blood_pressures(
     Returns : the blood pressure structs with timestamps.
     """
 
-    def compute_box_x_center(box: List[float]):
-        return box[2] + (box[2] - box[0])
-
     def average_x_coord(blood_pressure: BloodPressure) -> float:
         no_systolic_box = blood_pressure.systolic_box is None
         no_diastolic_box = blood_pressure.diastolic_box is None
         if no_systolic_box:
-            return compute_box_x_center(blood_pressure.diastolic_box)
+            return blood_pressure.diastolic_box.get_x_center()
         if no_diastolic_box:
-            return compute_box_x_center(blood_pressure.systolic_box)
-        sys_x_center = compute_box_x_center(blood_pressure.systolic_box)
-        dia_x_center = compute_box_x_center(blood_pressure.diastolic_box)
+            return blood_pressure.systolic_box.get_x_center()
+        sys_x_center = blood_pressure.systolic_box.get_x_center()
+        dia_x_center = blood_pressure.diastolic_box.get_x_center()
         return (sys_x_center + dia_x_center) / 2
 
     stamped_bps = sorted(blood_pressures, key=average_x_coord)
     for index, blood_pressure in enumerate(stamped_bps):
         blood_pressure.timestamp = index * 5
-    # stamped_bps = [x.set_timestamp(ix * 5) for ix, x in enumerate(stamped_bps)]
     return stamped_bps
 
 
@@ -749,7 +711,7 @@ def show_detections(image):
     systolic_pred, diastolic_pred = make_detections(img)
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
-        draw.rectangle(box[:4], outline="#fbb584")
+        draw.rectangle(box.get_box(), outline="#fbb584")
     for box in diastolic_pred:
-        draw.rectangle(box[:4], outline="#6c799c")
+        draw.rectangle(box.get_box(), outline="#6c799c")
     return img
