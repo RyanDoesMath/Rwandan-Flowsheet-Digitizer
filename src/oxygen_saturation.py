@@ -175,18 +175,47 @@ def impute_value_for_erroneous_observations(
     """
 
     for index, obs in enumerate(observations):
-        if (
-            not obs.implausible
-            or index < 2
-            or observations[index - 1].implausible
-            or observations[index - 2].implausible
-        ):
+        if not obs.implausible:
             continue
 
-        forward_estimate = forward_regression(
-            observations[index - 1].percent, observations[index - 2].percent
+        t_minus_one_is_plausible = (
+            index >= 1 and not observations[index - 1].implausible
         )
-        backward_estimate = forward_estimate
+        t_minus_two_is_plausible = (
+            index >= 2 and not observations[index - 2].implausible
+        )
+        t_plus_one_is_plausible = (
+            index <= len(observations) - 1 and not observations[index + 1].implausible
+        )
+        t_plus_two_is_plausible = (
+            index <= len(observations) - 2 and not observations[index + 2].implausible
+        )
+        try:
+            t_minus_1 = observations[index - 1].percent
+        except IndexError:
+            t_minus_1 = 0
+
+        try:
+            t_minus_2 = observations[index - 2].percent
+        except IndexError:
+            t_minus_2 = 0
+
+        try:
+            t_plus_1 = observations[index + 1].percent
+        except IndexError:
+            t_plus_1 = 0
+
+        try:
+            t_plus_2 = observations[index + 2].percent
+        except IndexError:
+            t_plus_2 = 0
+
+        forward_estimate = forward_regression(
+            t_minus_1, t_minus_2, t_minus_one_is_plausible, t_minus_two_is_plausible
+        )
+        backward_estimate = backward_regression(
+            t_plus_1, t_plus_2, t_plus_one_is_plausible, t_plus_two_is_plausible
+        )
         obs.percent = correct_erroneous_observation(
             obs, forward_estimate, backward_estimate
         )
