@@ -50,7 +50,7 @@ def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
     observations = cluster_into_observations(boxes)
     observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
-    observations = flag_jumps_as_implausible(observations)
+    # observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
