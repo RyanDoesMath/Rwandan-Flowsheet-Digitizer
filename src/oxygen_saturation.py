@@ -149,7 +149,7 @@ def flag_jumps_as_implausible(
         2) The value jumpped from the previous value > 8 percentage points.
 
     Looking through available data, there has never been a jump greater than 4%.
-    So, to 'derate' this threshold, we double it to 8. This is enough to
+    So, to 'derate' this threshold, we increase it to 7%. This is enough to
     catch errors made in the tens place (IE: 89 instead of 99).
     """
     for index, obs in enumerate(observations):
@@ -167,7 +167,7 @@ def flag_jumps_as_implausible(
             else 0
         )
 
-        if (jump_to_next + jump_from_last) / 2 > 8:
+        if (jump_to_next + jump_from_last) / 2 > 7:
             obs.implausible = True
 
     return observations
