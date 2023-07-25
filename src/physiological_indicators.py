@@ -38,9 +38,6 @@ def extract_physiological_indicators(image: Image.Image) -> Dict[str, list]:
         strategy="not_iou",
     )
     print(predictions)
-    predictions = [
-        BoundingBox(l, t, r, b, co, cl) for l, t, r, b, cl, co in predictions
-    ]
     rows = cluster_into_rows(predictions, img.size[1])
 
     indicators = {}
