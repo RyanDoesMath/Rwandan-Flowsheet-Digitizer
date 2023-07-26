@@ -6,10 +6,10 @@ from PIL import Image, ImageDraw
 import pandas as pd
 from ultralytics import YOLO
 
-CHECKBOX_TILE_DATA = {"ROWS": 2, "COLUMNS": 7, "STRIDE": 1 / 2}
+CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
 BLUE = (35, 45, 75, 100)
 ORANGE = (229, 114, 0, 100)
-CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8.pt")
+CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
 
 
 def read_checkbox_data(image):
