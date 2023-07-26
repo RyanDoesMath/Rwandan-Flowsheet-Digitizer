@@ -8,8 +8,6 @@ from ultralytics import YOLO
 import tiles
 
 CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
-BLUE = (35, 45, 75, 100)
-ORANGE = (229, 114, 0, 100)
 CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
 
 
