@@ -5,6 +5,7 @@ from typing import List
 from PIL import Image, ImageDraw
 import pandas as pd
 from ultralytics import YOLO
+import tiles
 
 CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
 BLUE = (35, 45, 75, 100)
