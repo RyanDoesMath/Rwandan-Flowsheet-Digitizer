@@ -104,13 +104,13 @@ def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]
     """
     section_start = 4
     section_end = 7
-    patient_safety_boxes = detections[section_start:section_end]
-    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center)
+    mask_ventilation_boxes = detections[section_start:section_end]
+    mask_ventilation_boxes.sort(key=lambda bb: bb.get_y_center)
 
     return {
-        "easy_ventilation": bool(patient_safety_boxes[0].predicted_class),
-        "ventilation_with_adjunct": bool(patient_safety_boxes[1].predicted_class),
-        "difficult_ventilation": bool(patient_safety_boxes[2].predicted_class),
+        "easy_ventilation": bool(mask_ventilation_boxes[0].predicted_class),
+        "ventilation_with_adjunct": bool(mask_ventilation_boxes[1].predicted_class),
+        "difficult_ventilation": bool(mask_ventilation_boxes[2].predicted_class),
     }
 
 
@@ -125,14 +125,14 @@ def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
     """
     section_start = 7
     section_end = 11
-    patient_safety_boxes = detections[section_start:section_end]
-    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center)
+    airway_boxes = detections[section_start:section_end]
+    airway_boxes.sort(key=lambda bb: bb.get_y_center)
 
     return {
-        "natural_face_mask": bool(patient_safety_boxes[0].predicted_class),
-        "lma": bool(patient_safety_boxes[1].predicted_class),
-        "ett": bool(patient_safety_boxes[2].predicted_class),
-        "trach": bool(patient_safety_boxes[3].predicted_class),
+        "natural_face_mask": bool(airway_boxes[0].predicted_class),
+        "lma": bool(airway_boxes[1].predicted_class),
+        "ett": bool(airway_boxes[2].predicted_class),
+        "trach": bool(airway_boxes[3].predicted_class),
     }
 
 
@@ -146,6 +146,19 @@ def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str:b
         Brochoscope
         Other
     """
+    section_start = 11
+    section_end = 16
+    airway_placement_boxes = detections[section_start : section_end - 2]
+    used_not_used_boxes = detections[section_start + 3 : section_end]
+    airway_placement_boxes.sort(key=lambda bb: bb.get_y_center)
+
+    return {
+        "fibroscope": bool(airway_placement_boxes[0].predicted_class),
+        "brochoscope": bool(airway_placement_boxes[1].predicted_class),
+        "apa_other": bool(airway_placement_boxes[2].predicted_class),
+        "apa_used": bool(used_not_used_boxes[0].predicted_class),
+        "apa_not_used": bool(used_not_used_boxes[1].predicted_class),
+    }
 
 
 def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
