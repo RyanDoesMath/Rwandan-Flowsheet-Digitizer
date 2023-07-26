@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 *.pt
 src/*.ipynb
+data/intraop_form_uncompressed.png
+data/Rwandan_Four_Corner_Perfect_Labels.csv

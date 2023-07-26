@@ -9,6 +9,26 @@ from PIL import Image
 import deshadow
 
 
+def correct_image(image: np.ndarray):
+    """Uses a yolov8 model and a"""
+
+    model = load_corner_detection_model()
+    if not isinstance(image, np.ndarray):
+        image = deshadow.pil_to_cv2(image)
+    corner_predictions = model(image, verbose=False)
+    target_df = preds_to_df(corner_predictions)
+    if len(target_df) < 4:
+        raise ValueError("Could not find all four image landmarks.")
+    base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
+
+    im_target = image.copy()
+    im_base = imread("../data/intraop_form_uncompressed.png")
+    homography_matrix = compute_homography(base_df, target_df)
+    warped_image = warp_via_homography(im_base, im_target, homography_matrix)
+
+    return deshadow.cv2_to_pil(warped_image)
+
+
 def get_homography_list(base_df, target_df):
     """Gets a set of source and destination points for cv2.findHomography.
 
@@ -85,23 +105,3 @@ def load_corner_detection_model():
     """
     model_filepath = "../models/four_corners_detector_yolov8s.pt"
     return YOLO(model_filepath)
-
-
-def correct_image(image: np.ndarray):
-    """Uses a yolov8 model and a"""
-
-    model = load_corner_detection_model()
-    if not isinstance(image, np.ndarray):
-        image = deshadow.pil_to_cv2(image)
-    corner_predictions = model(image)
-    target_df = preds_to_df(corner_predictions)
-    if len(target_df) < 4:
-        raise ValueError("Could not find all four image landmarks.")
-    base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
-
-    im_target = image.copy()
-    im_base = imread("../data/intraop_form_uncompressed.png")
-    homography_matrix = compute_homography(base_df, target_df)
-    warped_image = warp_via_homography(im_base, im_target, homography_matrix)
-
-    return deshadow.cv2_to_pil(warped_image)

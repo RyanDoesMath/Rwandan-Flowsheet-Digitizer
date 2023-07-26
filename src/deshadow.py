@@ -60,7 +60,7 @@ def denoise_image(image):
 
 def cv2_to_pil(cv2_image):
     """Converts a cv2 image to a PIL image."""
-    color_converted = cvtColor(bitwise_not(cv2_image), COLOR_BGR2RGB)
+    color_converted = cvtColor(cv2_image, COLOR_BGR2RGB)
     pil_image = Image.fromarray(color_converted)
     return pil_image
 
