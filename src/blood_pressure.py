@@ -4,7 +4,7 @@ pressure section of the Rwandan flowsheet using YOLOv8."""
 import warnings
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -251,6 +251,7 @@ def find_bp_value_for_bbox(
     cropped_image = cropped_image.crop(
         [0, 0, cropped_image.width // 6, cropped_image.height]
     )
+    cropped_image = ImageOps.invert(cropped_image)
     horizontal_lines = extract_horizontal_lines(cropped_image)
     blood_pressure_predictions = adjust_boxes_for_margins(
         image, blood_pressure_predictions
