@@ -101,6 +101,15 @@ def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]
         Ventilation w/ Adjunct (oral airway)
         Difficult Ventilation
     """
+    section_start = 4
+    section_end = 7
+    patient_safety_boxes = detections[section_start:section_end]
+    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center)
+    return {
+        "easy_ventilation": bool(patient_safety_boxes[0].predicted_class),
+        "ventilation_with_adjunct": bool(patient_safety_boxes[1].predicted_class),
+        "difficult_ventilation": bool(patient_safety_boxes[2].predicted_class),
+    }
 
 
 def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
