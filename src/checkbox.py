@@ -1,7 +1,7 @@
 """A module for extracting the checkbox data from the checkbox section of a
 Rwandan intraoperative Flowsheet."""
 
-from typing import List
+from typing import List, Dict
 from PIL import Image, ImageDraw
 import pandas as pd
 from ultralytics import YOLO
@@ -13,13 +13,14 @@ ORANGE = (229, 114, 0, 100)
 CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
 
 
-def read_checkbox_data(image):
+def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
     """Reads the checkbox data from an image of the checkbox section.
 
     Parameters :
         image - a PIL image of the checkbox section.
 
-    Returns :
+    Returns : A dictionary of checkboxs names as keys, and  checked or
+              not checked as values..
     """
     detections = make_detections(image)
     values = read_checkbox_values(detections)
