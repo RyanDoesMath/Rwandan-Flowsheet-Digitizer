@@ -11,7 +11,7 @@ CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
 CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
 
 
-def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
+def extract_checkboxes(image: Image.Image) -> Dict[str, bool]:
     """Reads the checkbox data from an image of the checkbox section.
 
     Parameters :
@@ -34,7 +34,7 @@ def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
     return values
 
 
-def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Creates values from the raw detections.
 
     At the moment this assumes all boxes have been detected, but this will
@@ -71,7 +71,7 @@ def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str:bool]:
     return checkbox_vals
 
 
-def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the patient safety boxes into a dictionary.
 
     The patient safety column contains the following boxes:
@@ -93,7 +93,7 @@ def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
     }
 
 
-def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the mask ventilation boxes into a dictionary.
 
     The mask ventilation column contains the following boxes:
@@ -113,7 +113,7 @@ def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]
     }
 
 
-def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the airway boxes into a dictionary.
 
     The airway column contains the following boxes:
@@ -135,7 +135,7 @@ def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
     }
 
 
-def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the airway placement aid boxes into a dictionary.
 
     The airway placement aid column contains the following boxes:
@@ -160,7 +160,7 @@ def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str:b
     }
 
 
-def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the lra boxes into a dictionary.
 
     The lra column contains the following boxes:
@@ -177,7 +177,7 @@ def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
     }
 
 
-def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the tubes and lines boxes into a dictionary.
 
     The tubes and lines column contains the following boxes:
@@ -199,7 +199,7 @@ def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
     }
 
 
-def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the monitoring details boxes into a dictionary.
 
     The monitoring details column contains the following boxes:
@@ -235,7 +235,7 @@ def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str:boo
     }
 
 
-def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     """Reads the patient position boxes into a dictionary.
 
     The patient position column contains the following boxes:
