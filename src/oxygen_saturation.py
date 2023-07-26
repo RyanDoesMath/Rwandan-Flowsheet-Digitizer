@@ -223,6 +223,13 @@ def impute_value_for_erroneous_observations(
             t_minus_two_is_plausible = False
             t_plus_2 = 0
 
+        print(
+            t_minus_one_is_plausible,
+            t_minus_two_is_plausible,
+            t_plus_one_is_plausible,
+            t_plus_two_is_plausible,
+        )
+        print()
         forward_estimate = forward_regression(
             t_minus_1, t_minus_2, t_minus_one_is_plausible, t_minus_two_is_plausible
         )
@@ -315,6 +322,7 @@ def correct_erroneous_observation(
         if edit_dist in [0, 1]:
             possible_correct_values.append(val)
 
+    print(forward_estimate, backward_estimate)
     if np.isnan(estimate):
         return None
     if len(possible_correct_values) == 0:
