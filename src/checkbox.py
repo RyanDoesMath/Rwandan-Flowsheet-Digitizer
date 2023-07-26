@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw
 import pandas as pd
 from ultralytics import YOLO
 import tiles
+from bounding_box import BoundingBox
 
 CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
 CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
@@ -34,20 +35,112 @@ def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
     return values
 
 
-def read_checkbox_values(detections):
+def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str:bool]:
     """Creates values from the raw detections.
 
     Parameters:
-        detections - the model detections.
+        detections - A list of BoundingBox detections.
 
     Returns: A dictionary with (checkbox name(str):True/False(bool)).
     """
-    dataframe = make_detections_df(detections)
-    dataframe = add_section_column_to_df(dataframe)
-    dataframe = add_box_name_column_to_df(dataframe)
-    keys = list(dataframe["name"])
-    values = list(dataframe["checked"])
-    return {keys[ix]: values[ix] for ix in range(0, len(keys))}
+    checkbox_vals = {}
+
+    return checkbox_vals
+
+
+def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the patient safety boxes into a dictionary.
+
+    The patient safety column contains the following boxes:
+        Eye Protection
+        Warming
+        TED Stockings
+        Safety Checklist
+    """
+
+
+def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the mask ventilation boxes into a dictionary.
+
+    The mask ventilation column contains the following boxes:
+        Easy Ventilation
+        Ventilation w/ Adjunct (oral airway)
+        Difficult Ventilation
+    """
+
+
+def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the airway boxes into a dictionary.
+
+    The airway column contains the following boxes:
+        Natural; Face Mask N*
+        LMA N*
+        ETT N*
+        Trach N*
+    """
+
+
+def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the airway placement aid boxes into a dictionary.
+
+    The airway placement aid column contains the following boxes:
+        Used
+        Not Used
+        Fibroscope
+        Brochoscope
+        Other
+    """
+
+
+def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the lra boxes into a dictionary.
+
+    The lra column contains the following boxes:
+        Used
+        Not Used
+    """
+
+
+def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the tubes and lines boxes into a dictionary.
+
+    The tubes and lines column contains the following boxes:
+        Peripheral IV Line
+        Central IV Line
+        Urinary Catheter
+        Gastric Tube
+    """
+
+
+def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the monitoring details boxes into a dictionary.
+
+    The monitoring details column contains the following boxes:
+        ECG
+        NIBP
+        SpO2
+        EtCO2
+        Stethoscope
+        Temperature
+        NMT
+        Urine Output
+        Arterial BP
+        Other
+    """
+
+
+def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
+    """Reads the patient position boxes into a dictionary.
+
+    The patient position column contains the following boxes:
+        Supine
+        Prone
+        Litholomy
+        Sitting
+        Trendelenburg
+        Fowler
+        Lateral
+    """
 
 
 def add_section_column_to_df(dataframe):
