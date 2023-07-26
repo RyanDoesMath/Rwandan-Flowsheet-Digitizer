@@ -52,7 +52,7 @@ def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str, bool]:
     detections = sorted(detections, key=lambda bb: bb.confidence)[
         :total_number_of_boxes
     ]
-    detections = sorted(detections, key=lambda bb: bb.get_x_center)
+    detections = sorted(detections, key=lambda bb: bb.get_x_center())
     checkbox_sections = [
         read_patient_safety_boxes,
         read_mask_ventilation_boxes,
@@ -83,7 +83,7 @@ def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     section_start = 0
     section_end = 4
     patient_safety_boxes = detections[section_start:section_end]
-    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center)
+    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "eye_protection": bool(patient_safety_boxes[0].predicted_class),
@@ -104,7 +104,7 @@ def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str, bool
     section_start = 4
     section_end = 7
     mask_ventilation_boxes = detections[section_start:section_end]
-    mask_ventilation_boxes.sort(key=lambda bb: bb.get_y_center)
+    mask_ventilation_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "easy_ventilation": bool(mask_ventilation_boxes[0].predicted_class),
@@ -125,7 +125,7 @@ def read_airway_boxes(detections: List[BoundingBox]) -> Dict[str, bool]:
     section_start = 7
     section_end = 11
     airway_boxes = detections[section_start:section_end]
-    airway_boxes.sort(key=lambda bb: bb.get_y_center)
+    airway_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "natural_face_mask": bool(airway_boxes[0].predicted_class),
@@ -149,7 +149,7 @@ def read_airway_placement_aid_boxes(detections: List[BoundingBox]) -> Dict[str, 
     section_end = 16
     airway_placement_boxes = detections[section_start : section_end - 2]
     used_not_used_boxes = detections[section_start + 3 : section_end]
-    airway_placement_boxes.sort(key=lambda bb: bb.get_y_center)
+    airway_placement_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "fibroscope": bool(airway_placement_boxes[0].predicted_class),
@@ -189,7 +189,7 @@ def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str, bool]
     section_start = 18
     section_end = 22
     tubes_and_lines_boxes = detections[section_start:section_end]
-    tubes_and_lines_boxes.sort(key=lambda bb: bb.get_y_center)
+    tubes_and_lines_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "peripheral_iv_line": bool(tubes_and_lines_boxes[0].predicted_class),
@@ -218,8 +218,8 @@ def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str, bo
     section_end = 32
     md_left_col_boxes = detections[section_start : section_end - 5]
     md_right_col_boxes = detections[section_start + 5 : section_end]
-    md_left_col_boxes.sort(key=lambda bb: bb.get_y_center)
-    md_right_col_boxes.sort(key=lambda bb: bb.get_y_center)
+    md_left_col_boxes.sort(key=lambda bb: bb.get_y_center())
+    md_right_col_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "ecg": bool(md_left_col_boxes[0].predicted_class),
@@ -251,8 +251,8 @@ def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str, bool
     section_end = 39
     pp_left_col_boxes = detections[section_start : section_end - 3]
     pp_right_col_boxes = detections[section_start + 4 : section_end]
-    pp_left_col_boxes.sort(key=lambda bb: bb.get_y_center)
-    pp_right_col_boxes.sort(key=lambda bb: bb.get_y_center)
+    pp_left_col_boxes.sort(key=lambda bb: bb.get_y_center())
+    pp_right_col_boxes.sort(key=lambda bb: bb.get_y_center())
 
     return {
         "supine": bool(pp_left_col_boxes[0].predicted_class),
