@@ -57,20 +57,6 @@ def read_checkbox_values(detections):
     return {keys[ix]: values[ix] for ix in range(0, len(keys))}
 
 
-def make_detections_df(detections):
-    """Makes a dataframe from the detections.
-
-    Parameters:
-        detections - the list of the detections from make_detections()
-
-    Returns: A sorted dataframe with the detections.
-    """
-    columns = ["x1", "y1", "x2", "y2", "checked", "confidence"]
-    dataframe = pd.DataFrame(detections, columns=columns)
-    dataframe = dataframe.sort_values(["x1"])
-    return dataframe
-
-
 def add_section_column_to_df(dataframe):
     """Adds the checkbox section of the detection to the dataframe.
 
