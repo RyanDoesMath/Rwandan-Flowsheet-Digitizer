@@ -6,6 +6,7 @@ from cv2 import imread, warpPerspective, findHomography
 import pandas as pd
 import numpy as np
 from PIL import Image
+import deshadow
 
 
 def get_homography_list(base_df, target_df):
@@ -88,9 +89,10 @@ def load_corner_detection_model():
 
 def correct_image(image: np.ndarray):
     """Uses a yolov8 model and a"""
+
     model = load_corner_detection_model()
     if not isinstance(image, np.ndarray):
-        raise TypeError("Image is not a cv2 image.")
+        image = deshadow.pil_to_cv2(image)
     corner_predictions = model(image)
     target_df = preds_to_df(corner_predictions)
     if len(target_df) < 4:
@@ -102,4 +104,4 @@ def correct_image(image: np.ndarray):
     homography_matrix = compute_homography(base_df, target_df)
     warped_image = warp_via_homography(im_base, im_target, homography_matrix)
 
-    return Image.fromarray(warped_image)
+    return deshadow.cv2_to_pil(warped_image)
