@@ -75,7 +75,9 @@ def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox
     preds = kmeans.fit_predict(x_centers)
     masks = [[True if x == u else False for x in preds] for u in np.unique(preds)]
     sorted_boxes = [[x for ix, x in enumerate(boxes) if m[ix]] for m in masks]
-
+    sorted_boxes.sort(
+        key=lambda cluster: np.mean([bb.get_x_center() for bb in cluster])
+    )
     return sorted_boxes
 
 
