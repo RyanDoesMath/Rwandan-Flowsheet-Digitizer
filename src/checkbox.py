@@ -27,20 +27,6 @@ def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
     return values
 
 
-def show_detections(image, detections):
-    """Shows an image of the detections."""
-    new = Image.new("RGBA", image.size, (255, 255, 255, 0))
-    draw = ImageDraw.Draw(new)
-    for _, (_, val) in enumerate(detections.items()):
-        detection = val
-        bp_type = detection["type"]
-        box = detection["box"]
-        color = BLUE if bp_type == "systolic" else ORANGE
-        draw.rectangle(box, outline="black", width=2, fill=color)
-    out = Image.alpha_composite(image.convert("RGBA"), new)
-    return out
-
-
 def read_checkbox_values(detections):
     """Creates values from the raw detections.
 
@@ -154,3 +140,41 @@ def add_box_name_column_to_df(dataframe):
     dataframe = dataframe.sort_values(["section_order", "y1"])
     dataframe["name"] = names
     return dataframe
+
+
+def show_detections(
+    image: Image.Image,
+    overlap_tolerance: float = 0.3,
+    remove_non_square: bool = True,
+    strategy: str = "iou",
+) -> Image.Image:
+    """Shows an image of the detections.
+
+    Args :
+        image - A PIL image of the checkbox section.
+        overlap_tolerance - the threshold over which to remove an overlapping box.
+        remove_non_square - whether to remove blatently non-sqauare detections.
+        strategy - the strategy for overlap detection.
+
+
+    Returns : A PIL image with colored rectangles showing detections.
+    """
+    img = image.copy()
+    preds = tiles.tile_predict(
+        CHECKBOX_MODEL,
+        img,
+        rows=CHECKBOX_TILE_DATA["ROWS"],
+        columns=CHECKBOX_TILE_DATA["COLUMNS"],
+        stride=CHECKBOX_TILE_DATA["STRIDE"],
+        overlap_tolerance=overlap_tolerance,
+        remove_non_square=remove_non_square,
+        strategy=strategy,
+    )
+
+    draw = ImageDraw.Draw(img)
+    red = "#FF6D60"
+    green = "#98D8AA"
+    colors = {0.0: red, 1.0: green}
+    for pred in preds:
+        draw.rectangle(pred.get_box(), outline=colors[pred.predicted_class], width=2)
+    return img
