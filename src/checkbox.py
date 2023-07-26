@@ -3,7 +3,6 @@ Rwandan intraoperative Flowsheet."""
 
 from typing import List, Dict
 from PIL import Image, ImageDraw
-import pandas as pd
 from ultralytics import YOLO
 import tiles
 from bounding_box import BoundingBox
