@@ -22,7 +22,16 @@ def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
     Returns : A dictionary of checkboxs names as keys, and  checked or
               not checked as values..
     """
-    detections = make_detections(image)
+    detections = tiles.tile_predict(
+        CHECKBOX_MODEL,
+        image,
+        rows=CHECKBOX_TILE_DATA["ROWS"],
+        columns=CHECKBOX_TILE_DATA["COLUMNS"],
+        stride=CHECKBOX_TILE_DATA["STRIDE"],
+        overlap_tolerance=0.3,
+        remove_non_square=True,
+        strategy="iou",
+    )
     values = read_checkbox_values(detections)
     return values
 
