@@ -168,6 +168,14 @@ def read_lra_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
         Used
         Not Used
     """
+    section_start = 16
+    section_end = 18
+    lra_boxes = detections[section_start:section_end]
+
+    return {
+        "lra_used": bool(lra_boxes[0].predicted_class),
+        "lra_not_used": bool(lra_boxes[1].predicted_class),
+    }
 
 
 def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
