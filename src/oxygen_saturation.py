@@ -311,6 +311,8 @@ def correct_erroneous_observation(
         if edit_dist in [0, 1]:
             possible_correct_values.append(val)
 
+    if np.isnan(estimate):
+        return None
     if len(possible_correct_values) == 0:
         return int(round(estimate, 0))
     distance_from_predicted_value = {
