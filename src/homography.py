@@ -20,10 +20,8 @@ def correct_image(image: np.ndarray):
         raise ValueError("Could not find all four image landmarks.")
     base_df = pd.read_csv("../data/Rwandan_Four_Corner_Perfect_Labels.csv")
 
-    im_target = image.copy()
-    im_base = imread("../data/intraop_form_uncompressed.png")
     homography_matrix = compute_homography(base_df, target_df)
-    warped_image = warp_via_homography(im_base, im_target, homography_matrix)
+    warped_image = warp_via_homography(image, homography_matrix)
 
     return deshadow.cv2_to_pil(warped_image)
 
@@ -62,17 +60,16 @@ def compute_homography(base_df, target_df):
     return homography
 
 
-def warp_via_homography(im_base, im_target, homography_matrix):
+def warp_via_homography(im_target, homography_matrix):
     """Warps an image by using the homography matrix.
 
     Parameters :
-        im_base - the control image which is not warped.
         im_target - the target/warped image to correct.
 
     Returns : an image which has linear distortions corrected via homography transformation.
     """
-    size = im_base.shape
-    im_warped = warpPerspective(im_target, homography_matrix, (size[1], size[0]))
+    height, width = (1168, 1606)
+    im_warped = warpPerspective(im_target, homography_matrix, (width, height))
     return im_warped
 
 
