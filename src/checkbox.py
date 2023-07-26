@@ -55,7 +55,7 @@ def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str:bool]:
     ]
     detections = sorted(detections, key=lambda bb: bb.get_x_center)
     checkbox_sections = [
-        read_patient_position_boxes,
+        read_patient_safety_boxes,
         read_mask_ventilation_boxes,
         read_airway_boxes,
         read_airway_placement_aid_boxes,
