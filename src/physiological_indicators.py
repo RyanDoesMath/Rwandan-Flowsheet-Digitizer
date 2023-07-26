@@ -175,4 +175,8 @@ def get_values_for_boxes(
     Returns : The actual values for that section in a list of objects.
     """
     strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
-    return strategies[section_name](boxes, image)
+    try:
+        return strategies[section_name](boxes, image)
+    except KeyError:
+        print(f"{section_name} has not been implemented yet.")
+        return None
