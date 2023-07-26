@@ -37,6 +37,7 @@ def deshadow_and_normalize_image(image):
         norm_type=NORM_MINMAX,
         dtype=CV_8UC1,
     )
+    norm_img = bitwise_not(norm_img)
     norm_img = cv2_to_pil(norm_img)
     return norm_img
 
