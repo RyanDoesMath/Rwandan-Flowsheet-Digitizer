@@ -248,6 +248,22 @@ def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str:bool]
         Fowler
         Lateral
     """
+    section_start = 32
+    section_end = 39
+    pp_left_col_boxes = detections[section_start : section_end - 3]
+    pp_right_col_boxes = detections[section_start + 4 : section_end]
+    pp_left_col_boxes.sort(key=lambda bb: bb.get_y_center)
+    pp_right_col_boxes.sort(key=lambda bb: bb.get_y_center)
+
+    return {
+        "supine": bool(pp_left_col_boxes[0].predicted_class),
+        "prone": bool(pp_left_col_boxes[1].predicted_class),
+        "litholomy": bool(pp_left_col_boxes[2].predicted_class),
+        "sitting": bool(pp_left_col_boxes[3].predicted_class),
+        "trendelenburg": bool(pp_right_col_boxes[0].predicted_class),
+        "fowler": bool(pp_right_col_boxes[1].predicted_class),
+        "lateral": bool(pp_right_col_boxes[2].predicted_class),
+    }
 
 
 def add_section_column_to_df(dataframe):
