@@ -4,7 +4,7 @@ physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 from typing import Dict, List
 import warnings
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from ultralytics import YOLO
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
@@ -180,3 +180,36 @@ def get_values_for_boxes(
     except KeyError:
         print(f"{section_name} has not been implemented yet.")
         return None
+
+
+def show_detections(image: Image.Image) -> Image.Image:
+    """Shows a color coded version of the physiological indicator detections."""
+    img = deshadow.deshadow_and_normalize_image(image)
+    predictions = tiles.tile_predict(
+        SINGLE_CHAR_MODEL,
+        img,
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["ROWS"],
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["COLUMNS"],
+        PHYSIOLOGICAL_INDICATOR_TILE_DATA["STRIDE"],
+        0.5,
+        strategy="not_iou",
+    )
+    rows = cluster_into_rows(predictions, img.size[1])
+
+    section_colors = {
+        "SpO2": "#b37486",
+        "EtCO2": "#5b9877",
+        "FiO2": "#e6bd57",
+        "Tidal_VolxF": "#7c98a6",
+        "Temp_C": "#e7a29c",
+        "Diuresis": "#534d6b",
+        "Blood_Loss": "#d67d53",
+    }
+
+    draw = ImageDraw.Draw(img)
+    for key in list(rows.keys()):
+        color = section_colors[key]
+        for pred in rows[key]:
+            draw.rectangle(pred.get_box(), outline=color, width=2)
+
+    return img
