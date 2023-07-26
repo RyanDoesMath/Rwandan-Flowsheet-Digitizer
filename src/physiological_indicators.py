@@ -110,7 +110,6 @@ def check_if_section_has_only_one_row(
     difference between the max and min value is less than 10%, it is very likely
     there is only one row.
     """
-    print(predictions)
     y_centers = [bb.get_y_center() for bb in predictions]
     max_val = max(y_centers)
     min_val = min(y_centers)
