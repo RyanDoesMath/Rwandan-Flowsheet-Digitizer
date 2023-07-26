@@ -2,7 +2,7 @@
 and returns a rectified image based on the landmarks identified."""
 
 from ultralytics import YOLO
-from cv2 import imread, warpPerspective, findHomography
+from cv2 import warpPerspective, findHomography
 import pandas as pd
 import numpy as np
 import deshadow
