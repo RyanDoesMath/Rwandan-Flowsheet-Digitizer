@@ -68,8 +68,8 @@ def warp_via_homography(im_target, homography_matrix):
 
     Returns : an image which has linear distortions corrected via homography transformation.
     """
-    height, width = (1168, 1606)
-    im_warped = warpPerspective(im_target, homography_matrix, (width, height))
+    new_height, new_width = (1168, 1606)
+    im_warped = warpPerspective(im_target, homography_matrix, (new_width, new_height))
     return im_warped
 
 
