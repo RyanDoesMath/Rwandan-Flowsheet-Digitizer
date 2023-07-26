@@ -38,12 +38,36 @@ def extract_checkboxes(image: Image.Image) -> Dict[str:bool]:
 def read_checkbox_values(detections: List[BoundingBox]) -> Dict[str:bool]:
     """Creates values from the raw detections.
 
+    At the moment this assumes all boxes have been detected, but this will
+    be changed to deal with missing boxes.
+
     Parameters:
         detections - A list of BoundingBox detections.
 
     Returns: A dictionary with (checkbox name(str):True/False(bool)).
     """
+    total_number_of_boxes = 39
+    if len(detections) < total_number_of_boxes:
+        raise ValueError("Not all boxes have been detected.")
+
+    detections = sorted(detections, key=lambda bb: bb.confidence)[
+        :total_number_of_boxes
+    ]
+    detections = sorted(detections, key=lambda bb: bb.get_x_center)
+    checkbox_sections = [
+        read_patient_position_boxes,
+        read_mask_ventilation_boxes,
+        read_airway_boxes,
+        read_airway_placement_aid_boxes,
+        read_lra_boxes,
+        read_tubes_and_lines_boxes,
+        read_monitoring_details_boxes,
+        read_patient_position_boxes,
+    ]
     checkbox_vals = {}
+    for section_func in checkbox_sections:
+        section_dict = section_func(detections)
+        checkbox_vals.update(section_dict)
 
     return checkbox_vals
 
