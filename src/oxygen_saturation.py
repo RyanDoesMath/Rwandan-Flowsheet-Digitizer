@@ -87,6 +87,9 @@ def predict_values(
     Returns : A list of OxygenSaturation objects with no percent or timestamp.
     """
     values = []
+    observations.sort(
+        key=lambda cluster: np.mean([bb.get_x_center() for bb in cluster])
+    )
     for cluster in observations:
         cluster_chars = []
         cluster_boxes = []
