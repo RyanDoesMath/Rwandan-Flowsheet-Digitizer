@@ -187,6 +187,17 @@ def read_tubes_and_lines_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
         Urinary Catheter
         Gastric Tube
     """
+    section_start = 18
+    section_end = 22
+    tubes_and_lines_boxes = detections[section_start:section_end]
+    tubes_and_lines_boxes.sort(key=lambda bb: bb.get_y_center)
+
+    return {
+        "peripheral_iv_line": bool(tubes_and_lines_boxes[0].predicted_class),
+        "central_iv_line": bool(tubes_and_lines_boxes[1].predicted_class),
+        "urinary_catheter": bool(tubes_and_lines_boxes[2].predicted_class),
+        "gastric_tube": bool(tubes_and_lines_boxes[3].predicted_class),
+    }
 
 
 def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
