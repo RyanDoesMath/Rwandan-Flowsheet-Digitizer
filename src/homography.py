@@ -5,17 +5,16 @@ from ultralytics import YOLO
 from cv2 import imread, warpPerspective, findHomography
 import pandas as pd
 import numpy as np
-from PIL import Image
 import deshadow
+
+CORNER_MODEL = YOLO("../models/four_corners_detector_yolov8s.pt")
 
 
 def correct_image(image: np.ndarray):
     """Uses a yolov8 model and a"""
-
-    model = load_corner_detection_model()
     if not isinstance(image, np.ndarray):
         image = deshadow.pil_to_cv2(image)
-    corner_predictions = model(image, verbose=False)
+    corner_predictions = CORNER_MODEL(image, verbose=False)
     target_df = preds_to_df(corner_predictions)
     if len(target_df) < 4:
         raise ValueError("Could not find all four image landmarks.")
@@ -96,12 +95,3 @@ def preds_to_df(preds):
     boxes["conf"] = confs
 
     return boxes
-
-
-def load_corner_detection_model():
-    """Loads the yolov8 model for detecting corners.
-
-    Returns : a yolov8 model for detecting the four image corner landmarks.
-    """
-    model_filepath = "../models/four_corners_detector_yolov8s.pt"
-    return YOLO(model_filepath)
