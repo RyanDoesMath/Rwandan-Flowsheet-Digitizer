@@ -81,6 +81,16 @@ def read_patient_safety_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
         TED Stockings
         Safety Checklist
     """
+    section_start = 0
+    section_end = 4
+    patient_safety_boxes = detections[section_start:section_end]
+    patient_safety_boxes.sort(key=lambda bb: bb.get_y_center)
+    return {
+        "eye_protection": bool(patient_safety_boxes[0].predicted_class),
+        "warming": bool(patient_safety_boxes[1].predicted_class),
+        "ted_stockings": bool(patient_safety_boxes[2].predicted_class),
+        "safety_checklist": bool(patient_safety_boxes[3].predicted_class),
+    }
 
 
 def read_mask_ventilation_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
