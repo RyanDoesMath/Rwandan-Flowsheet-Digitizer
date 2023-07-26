@@ -215,6 +215,25 @@ def read_monitoring_details_boxes(detections: List[BoundingBox]) -> Dict[str:boo
         Arterial BP
         Other
     """
+    section_start = 22
+    section_end = 32
+    md_left_col_boxes = detections[section_start : section_end - 5]
+    md_right_col_boxes = detections[section_start + 5 : section_end]
+    md_left_col_boxes.sort(key=lambda bb: bb.get_y_center)
+    md_right_col_boxes.sort(key=lambda bb: bb.get_y_center)
+
+    return {
+        "ecg": bool(md_left_col_boxes[0].predicted_class),
+        "nibp": bool(md_left_col_boxes[1].predicted_class),
+        "spo2": bool(md_left_col_boxes[2].predicted_class),
+        "etco2": bool(md_left_col_boxes[3].predicted_class),
+        "stethoscope": bool(md_left_col_boxes[4].predicted_class),
+        "temperature": bool(md_right_col_boxes[0].predicted_class),
+        "nmt": bool(md_right_col_boxes[1].predicted_class),
+        "urine_output": bool(md_right_col_boxes[2].predicted_class),
+        "arterial_bp": bool(md_right_col_boxes[3].predicted_class),
+        "monitoring_details_other": bool(md_right_col_boxes[4].predicted_class),
+    }
 
 
 def read_patient_position_boxes(detections: List[BoundingBox]) -> Dict[str:bool]:
