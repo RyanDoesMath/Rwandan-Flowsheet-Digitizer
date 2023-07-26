@@ -80,7 +80,7 @@ def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox
 
 
 def predict_values(
-    observations: List[BoundingBox], image: Image.Image
+    observations: List[List[BoundingBox]], image: Image.Image
 ) -> List[OxygenSaturation]:
     """Uses a CNN to classify the individual images.
 
@@ -90,6 +90,7 @@ def predict_values(
     for cluster in observations:
         cluster_chars = []
         cluster_boxes = []
+        cluster.sort(key=lambda bb: bb.get_x_center())
         for bbox in cluster:
             single_char_img = image.crop(bbox.get_box())
             number = classify_image(single_char_img)
