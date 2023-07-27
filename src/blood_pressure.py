@@ -151,7 +151,6 @@ def crop_legend_out(image):
     Returns : a cropped version of the image with only the BP graph.
     """
     width, _ = image.size
-    image.save("testim2.jpg")
     try:
         box_and_class = make_legend_predictions(image)
         two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
