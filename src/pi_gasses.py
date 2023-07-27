@@ -213,18 +213,11 @@ def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
     return observations
 
 
-def impute_value_for_erroneous_observations(
-    observations: List,
-) -> List:
+def impute_value_for_erroneous_observations(observations: List) -> List:
     """Imputes a value to erroneous observations using linear regression.
 
-    This function will use the previous two and next two observations if neither
-    are erroneous to create an averaged estimation of what the value should be.
-    Then, the function checks all the available one-edit distance values from the
-    observation (in this case, a delete, swap, or insert is an edit).
-    Finally, the one-edit value that is closest to the regression estimation is
-    chosen, or, in the case where there are no one-edit values that are in the
-    range (75, 100), the regression estimation itself is rounded and used.
+    Creates a linear regression model with the previous two values and next two values and predicts
+    the current value based on the output.
     """
 
     for index, obs in enumerate(observations):
