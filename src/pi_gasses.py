@@ -14,6 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
 import oxygen_saturation
+import end_tidal_carbon_dioxide
 
 CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
 num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
@@ -68,6 +69,7 @@ def cluster_into_observations(
     """
     strategies = {
         "SpO2": oxygen_saturation.get_limits_for_number_of_clusters,
+        "EtCO2": end_tidal_carbon_dioxide.get_limits_for_number_of_clusters,
     }
     lower_lim, upper_lim = strategies[strategy](len(boxes))
 
@@ -142,7 +144,10 @@ def create_gas_objects(
     Returns : A list of objects that couple the box with the chars, and that can store other data
     like whether or not the objects chars are plausible, and a finalized value.
     """
-    strategies = {"SpO2": oxygen_saturation.OxygenSaturation}
+    strategies = {
+        "SpO2": oxygen_saturation.OxygenSaturation,
+        "EtCO2": end_tidal_carbon_dioxide.EndTidalCarbonDioxide,
+    }
 
     objs = []
     for index, cluster_boxes in enumerate(boxes):
@@ -169,7 +174,11 @@ def impute_naive_value(observations: List, strategy: str) -> List:
         "SpO2": (
             oxygen_saturation.LOWEST_PLAUSIBLE_VALUE,
             oxygen_saturation.HIGHEST_PLAUSIBLE_VALUE,
-        )
+        ),
+        "EtCO2": (
+            end_tidal_carbon_dioxide.LOWEST_PLAUSIBLE_VALUE,
+            end_tidal_carbon_dioxide.HIGHEST_PLAUSIBLE_VALUE,
+        ),
     }
     lowest_plausible_value, highest_plausible_value = strategies[strategy]
     for obs in observations:
@@ -189,7 +198,10 @@ def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
         2) The value jumpped from the previous value > x percentage points, where x is defined by
            the gas.
     """
-    strategies = {"SpO2": oxygen_saturation.JUMP_THRESHOLD}
+    strategies = {
+        "SpO2": oxygen_saturation.JUMP_THRESHOLD,
+        "EtCO2": end_tidal_carbon_dioxide.JUMP_THRESHOLD,
+    }
     jump_threshold = strategies[strategy]
 
     for index, obs in enumerate(observations):
