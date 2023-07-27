@@ -61,7 +61,7 @@ def extract_blood_pressure(image) -> dict:
     """
     preprocessed_image = preprocess_image(image)
     cropped_width = crop_legend_out(image).size[0]
-    systolic_pred, diastolic_pred = make_detections(preprocessed_image)
+    systolic_pred, diastolic_pred = make_detections(image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
     bp_pred = find_bp_value_for_bbox(preprocessed_image, bp_pred)
@@ -76,7 +76,7 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
 
     Returns : A tuple with systolic_boxes, distolic_boxes
     """
-    img = image.copy()
+    img = preprocess_image(image).copy()
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
         img,
