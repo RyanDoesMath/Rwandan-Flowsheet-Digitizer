@@ -60,7 +60,7 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     preprocessed_image = preprocess_image(image)
-    cropped_width = crop_legend_out(preprocessed_image).size[0]
+    cropped_width = crop_legend_out(image).size[0]
     systolic_pred, diastolic_pred = make_detections(preprocessed_image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
@@ -147,9 +147,12 @@ def crop_legend_out(image):
     Returns : a cropped version of the image with only the BP graph.
     """
     width, _ = image.size
-    box_and_class = make_legend_predictions(image)
-
-    two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+    try:
+        box_and_class = make_legend_predictions(image)
+        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+    except ValueError:
+        box_and_class = make_legend_predictions(preprocess_image(image))
+        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
     top = two_hundred_box.top
     bottom = thirty_box.bottom
     right = max(two_hundred_box.right, thirty_box.right)
