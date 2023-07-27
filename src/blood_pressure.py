@@ -113,8 +113,12 @@ def remove_legend_predictions(
         sys_pred - a list of bounding boxes for the systolic predictions.
         dia_pred - a list of bounding boxes for the diastolic predictions.
     """
-    box_and_class = make_legend_predictions(image)
-    two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
+    try:
+        box_and_class = make_legend_predictions(image)
+        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+    except ValueError:
+        box_and_class = make_legend_predictions(preprocess_image(image))
+        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
     sys_pred = list(filter(lambda box: box.left > two_hundred_box.right, sys_pred))
     dia_pred = list(filter(lambda box: box.left > two_hundred_box.right, dia_pred))
     return sys_pred, dia_pred
