@@ -40,7 +40,8 @@ def get_values_for_boxes(
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes, strategy)
-    observations = predict_values(observations, image)
+    predicted_chars = predict_values(observations, image)
+    observations = create_gas_objects(observations, predicted_chars, strategy)
     observations = impute_naive_value(observations)
     observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
@@ -92,30 +93,26 @@ def cluster_into_observations(
 
 def predict_values(
     observations: List[List[BoundingBox]], image: Image.Image
-) -> List[OxygenSaturation]:
+) -> List[List[int]]:
     """Uses a CNN to classify the individual images.
 
-    Returns : A list of OxygenSaturation objects with no percent or timestamp.
+    Args :
+        observations - The clustered BoundingBoxes
+        image - The PIL image of the physiological indicators section.
+
+    Returns : A list conntaining the predicted chars for each box.
     """
-    values = []
+    chars = []
+
     for cluster in observations:
         cluster_chars = []
-        cluster_boxes = []
         cluster.sort(key=lambda bb: bb.get_x_center())
         for bbox in cluster:
             single_char_img = image.crop(bbox.get_box())
             number = classify_image(single_char_img)
             cluster_chars.append(number)
-            cluster_boxes.append(bbox)
-        obs = OxygenSaturation(
-            chars=cluster_chars,
-            boxes=cluster_boxes,
-            percent=-1,
-            timestamp=-1,
-            implausible=False,
-        )
-        values.append(obs)
-    return values
+        chars.append(cluster_chars)
+    return chars
 
 
 def classify_image(image: Image.Image):
@@ -130,6 +127,34 @@ def classify_image(image: Image.Image):
     input_image = datatransform(image)
     pred = CHAR_CLASSIFICATION_MODEL(input_image.unsqueeze(0)).tolist()[0]
     return np.argmax(pred)
+
+
+def create_gas_objects(
+    boxes: List[List[BoundingBox]], chars: List[List[int]], strategy: str
+) -> List:
+    """Creates the proper object to store the Boxes alongside the chars that we predicted for them.
+
+    Args :
+        boxes - The bounding boxes for the objects.
+        chars - The predicted chars for the objects.
+        strategy - A string used to get the particular object needed to store the data.
+
+    Returns : A list of objects that couple the box with the chars, and that can store other data
+    like whether or not the objects chars are plausible, and a finalized value.
+    """
+    strategies = {"SpO2": oxygen_saturation.OxygenSaturation}
+
+    objs = []
+    for index, cluster_boxes in enumerate(boxes):
+        new_obj = strategies[strategy](
+            chars=chars[index],
+            boxes=cluster_boxes,
+            percent=-1,
+            timestamp=-1,
+            implausible=False,
+        )
+        objs.append(new_obj)
+    return objs
 
 
 def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSaturation]:
