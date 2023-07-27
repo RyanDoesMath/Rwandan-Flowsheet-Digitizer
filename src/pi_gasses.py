@@ -1,6 +1,6 @@
-"""The pi_gasses module provides an implementation for get_values_for_boxes for 
-SpO2, EtCO2, and FiO2 that the physiological_indicators module can use to get 
-values for the bounding box detections it made."""
+"""The pi_gasses module provides an implementation for get_values_for_boxes for SpO2, EtCO2, and 
+FiO2 that the physiological_indicators module can use to get values for the bounding box 
+detections it made."""
 
 from dataclasses import dataclass
 from typing import List
@@ -36,15 +36,18 @@ class OxygenSaturation:
     implausible: bool = False
 
 
-def get_values_for_boxes(boxes: List[BoundingBox], image: Image.Image) -> list:
-    """Implements a strategy for getting the values for the spo2
-    boxes from the physiological indicator section.
+def get_values_for_boxes(
+    boxes: List[BoundingBox], image: Image.Image, strategy: str
+) -> list:
+    """Implements a strategy for getting the values for the gas boxes from the physiological
+    indicator section.
 
     Args :
         boxes - the boxes in that section.
         image - the image that the boxes come from.
+        strategy - Determines constants in other functions. One of ["SpO2", "EtCO2", "FiO2"].
 
-    Returns : The actual values for the spo2 section in a list of objects.
+    Returns : The actual values for the specific gas section in a list of objects.
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes)
