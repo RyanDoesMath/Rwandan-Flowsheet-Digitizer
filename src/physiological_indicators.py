@@ -10,7 +10,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import deshadow
 import tiles
-import oxygen_saturation
+import pi_gasses
 from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
@@ -174,9 +174,13 @@ def get_values_for_boxes(
 
     Returns : The actual values for that section in a list of objects.
     """
-    strategies = {"SpO2": oxygen_saturation.get_values_for_boxes}
+    strategies = {
+        "SpO2": pi_gasses.get_values_for_boxes,
+        "EtCO2": pi_gasses.get_values_for_boxes,
+        "FiO2": pi_gasses.get_values_for_boxes,
+    }
     try:
-        return strategies[section_name](boxes, image)
+        return strategies[section_name](boxes, image, section_name)
     except KeyError:
         print(f"{section_name} has not been implemented yet.")
         return None
