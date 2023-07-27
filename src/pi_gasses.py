@@ -42,7 +42,7 @@ def get_values_for_boxes(
     observations = cluster_into_observations(boxes, strategy)
     predicted_chars = predict_values(observations, image)
     observations = create_gas_objects(observations, predicted_chars, strategy)
-    observations = impute_naive_value(observations)
+    observations = impute_naive_value(observations, strategy)
     observations = flag_jumps_as_implausible(observations)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
@@ -157,16 +157,21 @@ def create_gas_objects(
     return objs
 
 
-def impute_naive_value(observations: List[OxygenSaturation]) -> List[OxygenSaturation]:
-    """Uses a naive method to impute the value based on the chars.
+def impute_naive_value(observations: List, strategy: str) -> List:
+    """Uses a naive method to impute the value of a gas object based on the chars.
 
     This works for most values, but not all. However, this first pass is needed to
     impute the values for erroneous observations in the following steps.
 
-    Returns : A list of OxygenSaturations with percent values.
+    Returns : A list of gas objects with values.
     """
-    lowest_plausible_value = 75
-    highest_plausible_value = 100
+    strategies = {
+        "SpO2": (
+            oxygen_saturation.LOWEST_PLAUSIBLE_VALUE,
+            oxygen_saturation.HIGHEST_PLAUSIBLE_VALUE,
+        )
+    }
+    lowest_plausible_value, highest_plausible_value = strategies[strategy]
     for obs in observations:
         naive_value = int("".join([str(x) for x in obs.chars]))
         if lowest_plausible_value <= naive_value <= highest_plausible_value:
