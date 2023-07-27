@@ -25,17 +25,6 @@ CHAR_CLASSIFICATION_MODEL.load_state_dict(
 CHAR_CLASSIFICATION_MODEL.eval()
 
 
-@dataclass
-class OxygenSaturation:
-    """Dataclass for spo2."""
-
-    chars: list
-    boxes: list
-    percent: int
-    timestamp: int
-    implausible: bool = False
-
-
 def get_values_for_boxes(
     boxes: List[BoundingBox], image: Image.Image, strategy: str
 ) -> list:
