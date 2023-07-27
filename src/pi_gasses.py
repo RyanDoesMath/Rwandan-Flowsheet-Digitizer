@@ -1,5 +1,5 @@
-"""The pi_gasses module provides an implementation for get_values_for_boxes for SpO2, EtCO2, and 
-FiO2 that the physiological_indicators module can use to get values for the bounding box 
+"""The pi_gasses module provides an implementation for get_values_for_boxes for SpO2, EtCO2, and
+FiO2 that the physiological_indicators module can use to get values for the bounding box
 detections it made."""
 
 from typing import List
