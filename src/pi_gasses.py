@@ -15,6 +15,7 @@ from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
 import oxygen_saturation
 import end_tidal_carbon_dioxide
+import fraction_of_inspired_oxygen
 
 CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
 num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
@@ -70,6 +71,7 @@ def cluster_into_observations(
     strategies = {
         "SpO2": oxygen_saturation.get_limits_for_number_of_clusters,
         "EtCO2": end_tidal_carbon_dioxide.get_limits_for_number_of_clusters,
+        "FiO2": fraction_of_inspired_oxygen.get_limits_for_number_of_clusters,
     }
     lower_lim, upper_lim = strategies[strategy](len(boxes))
 
@@ -147,6 +149,7 @@ def create_gas_objects(
     strategies = {
         "SpO2": oxygen_saturation.OxygenSaturation,
         "EtCO2": end_tidal_carbon_dioxide.EndTidalCarbonDioxide,
+        "FiO2": fraction_of_inspired_oxygen.FractionOfInspiredOxygen,
     }
 
     objs = []
@@ -179,6 +182,10 @@ def impute_naive_value(observations: List, strategy: str) -> List:
             end_tidal_carbon_dioxide.LOWEST_PLAUSIBLE_VALUE,
             end_tidal_carbon_dioxide.HIGHEST_PLAUSIBLE_VALUE,
         ),
+        "FiO2": (
+            fraction_of_inspired_oxygen.LOWEST_PLAUSIBLE_VALUE,
+            fraction_of_inspired_oxygen.HIGHEST_PLAUSIBLE_VALUE,
+        ),
     }
     lowest_plausible_value, highest_plausible_value = strategies[strategy]
     for obs in observations:
@@ -201,6 +208,7 @@ def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
     strategies = {
         "SpO2": oxygen_saturation.JUMP_THRESHOLD,
         "EtCO2": end_tidal_carbon_dioxide.JUMP_THRESHOLD,
+        "FiO2": fraction_of_inspired_oxygen.JUMP_THRESHOLD,
     }
     jump_threshold = strategies[strategy]
 

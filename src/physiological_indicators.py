@@ -177,6 +177,7 @@ def get_values_for_boxes(
     strategies = {
         "SpO2": pi_gasses.get_values_for_boxes,
         "EtCO2": pi_gasses.get_values_for_boxes,
+        "FiO2": pi_gasses.get_values_for_boxes,
     }
     try:
         return strategies[section_name](boxes, image, section_name)
