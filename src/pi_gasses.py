@@ -246,6 +246,6 @@ def impute_value_for_erroneous_observations(
             x_values = [[x[0]] for x in surrounding_observations]
             y_values = [[y[1]] for y in surrounding_observations]
             linreg = LinearRegression().fit(x_values, y_values)
-            observations[index] = int(round(linreg.predict([0]), 0))
+            observations[index] = int(round(linreg.predict([[0]]).tolist()[0][0], 0))
 
     return observations
