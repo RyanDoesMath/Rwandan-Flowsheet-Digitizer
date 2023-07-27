@@ -59,7 +59,6 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
-    image.save("testim.jpg")
     cropped_width = crop_legend_out(image).size[0]
     systolic_pred, diastolic_pred = make_detections(image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
