@@ -43,7 +43,7 @@ def get_values_for_boxes(
     predicted_chars = predict_values(observations, image)
     observations = create_gas_objects(observations, predicted_chars, strategy)
     observations = impute_naive_value(observations, strategy)
-    observations = flag_jumps_as_implausible(observations)
+    observations = flag_jumps_as_implausible(observations, strategy)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
