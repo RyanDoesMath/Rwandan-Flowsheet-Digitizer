@@ -2,7 +2,6 @@
 FiO2 that the physiological_indicators module can use to get values for the bounding box 
 detections it made."""
 
-from dataclasses import dataclass
 from typing import List
 from functools import lru_cache
 import warnings
@@ -14,6 +13,7 @@ from torchvision import models, transforms
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
+import oxygen_saturation
 
 CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
 num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
