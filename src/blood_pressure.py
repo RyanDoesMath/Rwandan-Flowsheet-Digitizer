@@ -60,6 +60,7 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     preprocessed_image = preprocess_image(image)
+    image.save("testim.jpg")
     cropped_width = crop_legend_out(image).size[0]
     systolic_pred, diastolic_pred = make_detections(image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
@@ -151,6 +152,7 @@ def crop_legend_out(image):
     Returns : a cropped version of the image with only the BP graph.
     """
     width, _ = image.size
+    image.save("testim2.jpg")
     try:
         box_and_class = make_legend_predictions(image)
         two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
