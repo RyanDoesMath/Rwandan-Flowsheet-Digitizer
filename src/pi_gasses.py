@@ -181,19 +181,17 @@ def impute_naive_value(observations: List, strategy: str) -> List:
     return observations
 
 
-def flag_jumps_as_implausible(
-    observations: List[OxygenSaturation],
-) -> List[OxygenSaturation]:
+def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
     """Flags values that are implausible.
 
     There are two ways an observation can get flagged.
-        1) The value is not in the range 75-100.
-        2) The value jumpped from the previous value > 8 percentage points.
-
-    Looking through available data, there has never been a jump greater than 4%.
-    So, to 'derate' this threshold, we increase it to 7%. This is enough to
-    catch errors made in the tens place (IE: 89 instead of 99).
+        1) The value is not in the plausible range.
+        2) The value jumpped from the previous value > x percentage points, where x is defined by
+           the gas.
     """
+    strategies = {"SpO2": oxygen_saturation.JUMP_THRESHOLD}
+    jump_threshold = strategies[strategy]
+
     for index, obs in enumerate(observations):
         if index == 0 or index == len(observations) - 1:
             continue
@@ -209,7 +207,7 @@ def flag_jumps_as_implausible(
             else 0
         )
 
-        if (jump_to_next + jump_from_last) / 2 > 7:
+        if (jump_to_next + jump_from_last) / 2 > jump_threshold:
             obs.implausible = True
 
     return observations

@@ -6,6 +6,7 @@ from typing import Tuple
 
 LOWEST_PLAUSIBLE_VALUE = 75
 HIGHEST_PLAUSIBLE_VALUE = 100
+JUMP_THRESHOLD = 7
 
 
 @dataclass
