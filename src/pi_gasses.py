@@ -237,9 +237,7 @@ def impute_value_for_erroneous_observations(
                 if observations[surrounding_index].implausible:
                     continue
                 surrounding_observations.append(
-                    obs[
-                        (surrounding_index - 2, observations[surrounding_index].percent)
-                    ]
+                    (surrounding_index - 2, observations[surrounding_index].percent)
                 )
             except IndexError:
                 pass
