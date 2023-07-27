@@ -59,13 +59,12 @@ def extract_blood_pressure(image) -> dict:
     Returns : a dictionary of detections where the keys are timestamps,
               and the values are tuples with (systolic, diastolic).
     """
-    preprocessed_image = preprocess_image(image)
     image.save("testim.jpg")
     cropped_width = crop_legend_out(image).size[0]
     systolic_pred, diastolic_pred = make_detections(image)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
-    bp_pred = find_bp_value_for_bbox(preprocessed_image, bp_pred)
+    bp_pred = find_bp_value_for_bbox(image, bp_pred)
     return bp_pred
 
 
@@ -257,6 +256,7 @@ def find_bp_value_for_bbox(
     """
 
     cropped_image = crop_legend_out(image)
+    cropped_image = preprocess_image(cropped_image)
     cropped_image = cropped_image.crop(
         [0, 0, cropped_image.width // 6, cropped_image.height]
     )
