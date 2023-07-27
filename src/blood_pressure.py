@@ -714,9 +714,8 @@ def timestamp_blood_pressures(
 
 def show_detections(image):
     """Draws the bp detections on the image."""
-    img = image.copy()
-    img = preprocess_image(img)
-    systolic_pred, diastolic_pred = make_detections(img)
+    img = preprocess_image(image).copy()
+    systolic_pred, diastolic_pred = make_detections(image)
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
         draw.rectangle(box.get_box(), outline="#fbb584")
