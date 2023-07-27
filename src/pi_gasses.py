@@ -3,13 +3,13 @@ FiO2 that the physiological_indicators module can use to get values for the boun
 detections it made."""
 
 from typing import List
-from functools import lru_cache
 import warnings
 from PIL import Image
 import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import models, transforms
+from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
@@ -230,5 +230,24 @@ def impute_value_for_erroneous_observations(
     for index, obs in enumerate(observations):
         if not obs.implausible:
             continue
+
+        surrounding_observations = []
+        for surrounding_index in range(index - 2, index + 2):
+            try:
+                if observations[surrounding_index].implausible:
+                    continue
+                surrounding_observations.append(
+                    obs[
+                        (surrounding_index - 2, observations[surrounding_index].percent)
+                    ]
+                )
+            except IndexError:
+                pass
+
+        if len(surrounding_observations) > 0:
+            x_values = [[x[0]] for x in surrounding_observations]
+            y_values = [[y[1]] for y in surrounding_observations]
+            linreg = LinearRegression().fit(x_values, y_values)
+            observations[index] = int(round(linreg.predict([0]), 0))
 
     return observations
