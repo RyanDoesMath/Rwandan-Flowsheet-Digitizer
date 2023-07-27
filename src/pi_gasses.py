@@ -39,7 +39,7 @@ def get_values_for_boxes(
     Returns : The actual values for the specific gas section in a list of objects.
     """
     warnings.filterwarnings("ignore")
-    observations = cluster_into_observations(boxes)
+    observations = cluster_into_observations(boxes, strategy)
     observations = predict_values(observations, image)
     observations = impute_naive_value(observations)
     observations = flag_jumps_as_implausible(observations)
@@ -48,10 +48,27 @@ def get_values_for_boxes(
     return observations
 
 
-def cluster_into_observations(boxes: List[BoundingBox]) -> List[List[BoundingBox]]:
-    """Clusters the individual boxes into groups that are likely to go together."""
-    lower_lim = len(boxes) // 3 - int(0.2 * len(boxes) // 3)
-    upper_lim = len(boxes) // 2 + int(0.2 * len(boxes) // 2)
+def cluster_into_observations(
+    boxes: List[BoundingBox], strategy: str
+) -> List[List[BoundingBox]]:
+    """Clusters the individual boxes into groups that are likely to go together.
+
+    This function uses KMeans clustering by defining a lower and upper limit to the plausible
+    number of clusters (strategies for computing this depend upon the section). Then uses
+    the silhouette score to determine the optimal number of observations that need to be made,
+    and then returns the clusters with the optimal K value.
+
+    Args :
+        boxes - The detected boxes from the YOLOv8 model.
+        strategy - The section string that will be used to compute the upper and lower limits
+                   for the values of K.
+
+    Returns : Boxes clusted into discrete observations.
+    """
+    strategies = {
+        "SpO2": oxygen_saturation.get_limits_for_number_of_clusters,
+    }
+    lower_lim, upper_lim = strategies[strategy](len(boxes))
 
     x_centers = [box.get_x_center() for box in boxes]
     x_centers = np.array(x_centers).reshape(-1, 1)
