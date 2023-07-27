@@ -20,6 +20,11 @@ class FractionOfInspiredOxygen:
     implausible: bool = False
 
 
+def get_dataclass():
+    """Returns the dataclass object."""
+    return FractionOfInspiredOxygen
+
+
 def get_limits_for_number_of_clusters(number_of_boxes: int) -> Tuple[int]:
     """Gets the upper and lower limit for the number of clusters that could be made with the
     number of boxes present.

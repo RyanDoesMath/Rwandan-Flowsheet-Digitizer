@@ -41,6 +41,7 @@ def get_values_for_boxes(
     Returns : The actual values for the specific gas section in a list of objects.
     """
     warnings.filterwarnings("ignore")
+    strategy = set_strategy(strategy)
     observations = cluster_into_observations(boxes, strategy)
     predicted_chars = predict_values(observations, image)
     observations = create_gas_objects(observations, predicted_chars, strategy)
@@ -56,11 +57,19 @@ def set_strategy(strategy: str):
 
     Args :
         strategy - A string containing the name of the section.
+
+    Returns : The module with the strategy implemented that we need to get values for the boxes.
     """
+    strategies = {
+        "SpO2": oxygen_saturation,
+        "EtCO2": end_tidal_carbon_dioxide,
+        "FiO2": fraction_of_inspired_oxygen,
+    }
+    return strategies[strategy]
 
 
 def cluster_into_observations(
-    boxes: List[BoundingBox], strategy: str
+    boxes: List[BoundingBox], strategy
 ) -> List[List[BoundingBox]]:
     """Clusters the individual boxes into groups that are likely to go together.
 
@@ -71,17 +80,11 @@ def cluster_into_observations(
 
     Args :
         boxes - The detected boxes from the YOLOv8 model.
-        strategy - The section string that will be used to compute the upper and lower limits
-                   for the values of K.
+        strategy - The module with the strategy implemented that we need.
 
     Returns : Boxes clusted into discrete observations.
     """
-    strategies = {
-        "SpO2": oxygen_saturation.get_limits_for_number_of_clusters,
-        "EtCO2": end_tidal_carbon_dioxide.get_limits_for_number_of_clusters,
-        "FiO2": fraction_of_inspired_oxygen.get_limits_for_number_of_clusters,
-    }
-    lower_lim, upper_lim = strategies[strategy](len(boxes))
+    lower_lim, upper_lim = strategy.get_limits_for_number_of_clusters(len(boxes))
 
     x_centers = [box.get_x_center() for box in boxes]
     x_centers = np.array(x_centers).reshape(-1, 1)
@@ -142,27 +145,21 @@ def classify_image(image: Image.Image):
 
 
 def create_gas_objects(
-    boxes: List[List[BoundingBox]], chars: List[List[int]], strategy: str
+    boxes: List[List[BoundingBox]], chars: List[List[int]], strategy
 ) -> List:
     """Creates the proper object to store the Boxes alongside the chars that we predicted for them.
 
     Args :
         boxes - The bounding boxes for the objects.
         chars - The predicted chars for the objects.
-        strategy - A string used to get the particular object needed to store the data.
+        strategy - The module with the strategy implemented that we need.
 
     Returns : A list of objects that couple the box with the chars, and that can store other data
     like whether or not the objects chars are plausible, and a finalized value.
     """
-    strategies = {
-        "SpO2": oxygen_saturation.OxygenSaturation,
-        "EtCO2": end_tidal_carbon_dioxide.EndTidalCarbonDioxide,
-        "FiO2": fraction_of_inspired_oxygen.FractionOfInspiredOxygen,
-    }
-
     objs = []
     for index, cluster_boxes in enumerate(boxes):
-        new_obj = strategies[strategy](
+        new_obj = strategy.get_dataclass(
             chars=chars[index],
             boxes=cluster_boxes,
             percent=-1,
@@ -173,7 +170,7 @@ def create_gas_objects(
     return objs
 
 
-def impute_naive_value(observations: List, strategy: str) -> List:
+def impute_naive_value(observations: List, strategy) -> List:
     """Uses a naive method to impute the value of a gas object based on the chars.
 
     This works for most values, but not all. However, this first pass is needed to
@@ -181,21 +178,8 @@ def impute_naive_value(observations: List, strategy: str) -> List:
 
     Returns : A list of gas objects with values.
     """
-    strategies = {
-        "SpO2": (
-            oxygen_saturation.LOWEST_PLAUSIBLE_VALUE,
-            oxygen_saturation.HIGHEST_PLAUSIBLE_VALUE,
-        ),
-        "EtCO2": (
-            end_tidal_carbon_dioxide.LOWEST_PLAUSIBLE_VALUE,
-            end_tidal_carbon_dioxide.HIGHEST_PLAUSIBLE_VALUE,
-        ),
-        "FiO2": (
-            fraction_of_inspired_oxygen.LOWEST_PLAUSIBLE_VALUE,
-            fraction_of_inspired_oxygen.HIGHEST_PLAUSIBLE_VALUE,
-        ),
-    }
-    lowest_plausible_value, highest_plausible_value = strategies[strategy]
+    lowest_plausible_value = strategy.LOWEST_PLAUSIBLE_VALUE
+    highest_plausible_value = strategy.HIGHEST_PLAUSIBLE_VALUE
     for obs in observations:
         naive_value = int("".join([str(x) for x in obs.chars]))
         if lowest_plausible_value <= naive_value <= highest_plausible_value:
@@ -205,7 +189,7 @@ def impute_naive_value(observations: List, strategy: str) -> List:
     return observations
 
 
-def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
+def flag_jumps_as_implausible(observations: List, strategy) -> List:
     """Flags values that are implausible.
 
     There are two ways an observation can get flagged.
@@ -213,12 +197,7 @@ def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
         2) The value jumpped from the previous value > x percentage points, where x is defined by
            the gas.
     """
-    strategies = {
-        "SpO2": oxygen_saturation.JUMP_THRESHOLD,
-        "EtCO2": end_tidal_carbon_dioxide.JUMP_THRESHOLD,
-        "FiO2": fraction_of_inspired_oxygen.JUMP_THRESHOLD,
-    }
-    jump_threshold = strategies[strategy]
+    jump_threshold = strategy.JUMP_THRESHOLD
 
     for index, obs in enumerate(observations):
         if index == 0 or index == len(observations) - 1:
