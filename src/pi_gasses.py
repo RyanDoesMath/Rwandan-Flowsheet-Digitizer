@@ -51,6 +51,14 @@ def get_values_for_boxes(
     return observations
 
 
+def set_strategy(strategy: str):
+    """Sets consts and functions that will be used to extract the values from the specific section.
+
+    Args :
+        strategy - A string containing the name of the section.
+    """
+
+
 def cluster_into_observations(
     boxes: List[BoundingBox], strategy: str
 ) -> List[List[BoundingBox]]:
