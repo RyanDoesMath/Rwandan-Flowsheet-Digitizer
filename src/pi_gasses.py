@@ -3,13 +3,13 @@ FiO2 that the physiological_indicators module can use to get values for the boun
 detections it made."""
 
 from typing import List
-from functools import lru_cache
 import warnings
 from PIL import Image
 import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import models, transforms
+from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from bounding_box import BoundingBox
@@ -43,7 +43,7 @@ def get_values_for_boxes(
     predicted_chars = predict_values(observations, image)
     observations = create_gas_objects(observations, predicted_chars, strategy)
     observations = impute_naive_value(observations, strategy)
-    observations = flag_jumps_as_implausible(observations)
+    observations = flag_jumps_as_implausible(observations, strategy)
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
@@ -214,8 +214,8 @@ def flag_jumps_as_implausible(observations: List, strategy: str) -> List:
 
 
 def impute_value_for_erroneous_observations(
-    observations: List[OxygenSaturation],
-) -> List[OxygenSaturation]:
+    observations: List,
+) -> List:
     """Imputes a value to erroneous observations using linear regression.
 
     This function will use the previous two and next two observations if neither
@@ -231,187 +231,23 @@ def impute_value_for_erroneous_observations(
         if not obs.implausible:
             continue
 
-        try:
-            t_minus_one_is_plausible = not observations[index - 1].implausible
-            t_minus_1 = observations[index - 1].percent
-        except IndexError:
-            t_minus_one_is_plausible = False
-            t_minus_1 = 0
+        surrounding_observations = []
+        for surrounding_index in range(index - 2, index + 2):
+            try:
+                if observations[surrounding_index].implausible:
+                    continue
+                surrounding_observations.append(
+                    (surrounding_index - 2, observations[surrounding_index].percent)
+                )
+            except IndexError:
+                pass
 
-        try:
-            t_minus_two_is_plausible = not observations[index - 2].implausible
-            t_minus_2 = observations[index - 2].percent
-        except IndexError:
-            t_minus_two_is_plausible = False
-            t_minus_2 = 0
-
-        try:
-            t_plus_one_is_plausible = not observations[index + 1].implausible
-            t_plus_1 = observations[index + 1].percent
-        except IndexError:
-            t_plus_one_is_plausible = False
-            t_plus_1 = 0
-
-        try:
-            t_plus_two_is_plausible = not observations[index + 2].implausible
-            t_plus_2 = observations[index + 2].percent
-        except IndexError:
-            t_minus_two_is_plausible = False
-            t_plus_2 = 0
-
-        forward_estimate = forward_regression(
-            t_minus_1, t_minus_2, t_minus_one_is_plausible, t_minus_two_is_plausible
-        )
-        backward_estimate = backward_regression(
-            t_plus_1, t_plus_2, t_plus_one_is_plausible, t_plus_two_is_plausible
-        )
-        obs.percent = correct_erroneous_observation(
-            obs, forward_estimate, backward_estimate
-        )
+        if len(surrounding_observations) > 0:
+            x_values = [[x[0]] for x in surrounding_observations]
+            y_values = [[y[1]] for y in surrounding_observations]
+            linreg = LinearRegression().fit(x_values, y_values)
+            observations[index].percent = int(
+                round(linreg.predict([[0]]).tolist()[0][0], 0)
+            )
 
     return observations
-
-
-def forward_regression(
-    t_minus_1: int,
-    t_minus_2: int,
-    t_minus_1_is_plausible: bool = True,
-    t_minus_2_is_plausible: bool = True,
-) -> float:
-    """Estimates a value for an SpO2 based on the two previous values.
-
-    Args :
-        t_minus_1 - the last value.
-        t_minus_2 - the value before last.
-
-    Returns: An estimated value based on the previous two values.
-    """
-    if t_minus_1_is_plausible and t_minus_2_is_plausible:
-        beta_1 = 0.5904
-        beta_2 = 0.2844
-        intercept = 12.2984
-        return intercept + t_minus_1 * beta_1 + t_minus_2 * beta_2
-
-    if t_minus_1_is_plausible:
-        beta_1 = 0.8331
-        intercept = 16.3866
-        return intercept + t_minus_1 * beta_1
-
-    if t_minus_2_is_plausible:
-        beta_2 = 0.7616
-        intercept = 23.42
-        return intercept + t_minus_2 * beta_2
-
-    return np.nan
-
-
-def backward_regression(
-    t_plus_one: int,
-    t_plus_two: int,
-    t_plus_one_is_plausible: bool = True,
-    t_plus_two_is_plausible: bool = True,
-) -> float:
-    """Performs linear regression with the next two values to try to impute the current one.
-
-    Args :
-        t_plus_one - The next value.
-        t_plus_two - The value after next.
-
-    Returns : An estimated value based on the next two values.
-    """
-    if t_plus_one_is_plausible and t_plus_two_is_plausible:
-        beta_1 = 0.5952
-        beta_2 = 0.2686
-        intercept = 13.3739
-        return intercept + t_plus_one * beta_1 + t_plus_two * beta_2
-
-    if t_plus_one_is_plausible:
-        beta_1 = 0.8149
-        intercept = 18.1468
-        return intercept + t_plus_one * beta_1
-
-    if t_plus_two_is_plausible:
-        beta_2 = 0.7536
-        intercept = 24.1745
-        return intercept + t_plus_two * beta_2
-
-    return np.nan
-
-
-def correct_erroneous_observation(
-    observation: OxygenSaturation, forward_estimate: float, backward_estimate: float
-):
-    """Corrects a single erroneous observation."""
-    observation = remove_until_length_three(observation)
-    estimate = np.nanmean([forward_estimate, backward_estimate])
-    possible_correct_values = []
-    current_prediction = "".join([str(x) for x in observation.chars])
-    for val in range(75, 101):
-        edit_dist = levenshtein_dist(str(val), current_prediction)
-        if edit_dist in [0, 1]:
-            possible_correct_values.append(val)
-
-    if np.isnan(estimate):
-        return None
-    if len(possible_correct_values) == 0:
-        return int(round(estimate, 0))
-    distance_from_predicted_value = {
-        k: abs(k - estimate) for k in possible_correct_values
-    }
-    return min(distance_from_predicted_value, key=distance_from_predicted_value.get)
-
-
-def levenshtein_dist(string_1: str, string_2: str) -> int:
-    """This function will calculate the levenshtein distance between two input
-    strings a and b
-
-    Args :
-        string_1 (str) - The first string you want to compare
-        string_2 (str) - The second string you want to compare
-
-    returns:
-        This function will return the distnace between string a and b.
-
-    example:
-        a = 'stamp'
-        b = 'stomp'
-        lev_dist(a,b)
-        >> 1.0
-
-    https://towardsdatascience.com/text-similarity-w-levenshtein-distance-in-python-2f7478986e75
-    """
-
-    @lru_cache(None)  # for memorization
-    def min_dist(str1, str2):
-
-        if str1 == len(string_1) or str2 == len(string_2):
-            return len(string_1) - str1 + len(string_2) - str2
-
-        # no change required
-        if string_1[str1] == string_2[str2]:
-            return min_dist(str1 + 1, str2 + 1)
-
-        return 1 + min(
-            min_dist(str1, str2 + 1),  # insert character
-            min_dist(str1 + 1, str2),  # delete character
-            min_dist(str1 + 1, str2 + 1),  # replace character
-        )
-
-    return min_dist(0, 0)
-
-
-def argmin(target_list: list) -> int:
-    """Returns the index of the minimum value of a list."""
-    return min(range(len(target_list)), key=lambda x: target_list[x])
-
-
-def remove_until_length_three(observation: OxygenSaturation) -> OxygenSaturation:
-    """Removes boxes from observation until there are three left."""
-    confs = [box.confidence for box in observation.boxes]
-    if len(observation.boxes) <= 3:
-        return observation
-    while len(observation.boxes) > 3:
-        del_index = argmin(confs)
-        del observation.boxes[del_index]
-        del confs[del_index]
-    return observation

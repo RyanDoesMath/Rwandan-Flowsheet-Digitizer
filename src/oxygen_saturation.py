@@ -20,7 +20,7 @@ class OxygenSaturation:
     implausible: bool = False
 
 
-def get_limits_for_number_of_clusters(number_of_boxes: int) -> Tuple(int):
+def get_limits_for_number_of_clusters(number_of_boxes: int) -> Tuple[int]:
     """Gets the upper and lower limit for the number of clusters that could be made with the
     number of boxes present.
 
