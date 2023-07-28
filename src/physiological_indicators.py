@@ -188,6 +188,7 @@ def get_values_for_boxes(
         "SpO2": get_values_for_gas_boxes,
         "EtCO2": get_values_for_gas_boxes,
         "FiO2": get_values_for_gas_boxes,
+        "Tidal_VolxF": get_values_for_tidal_volume,
     }
     try:
         return strategies[section_name](boxes, image, section_name)
