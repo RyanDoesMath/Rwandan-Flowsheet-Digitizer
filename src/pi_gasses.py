@@ -251,3 +251,11 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
             )
 
     return observations
+
+
+def load_char_classification_model():
+    """Loads the chararacter classification model."""
+
+
+def load_x_vs_rest_model():
+    """Loads the X vs Rest model."""
