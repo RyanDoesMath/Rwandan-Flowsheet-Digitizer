@@ -260,5 +260,16 @@ def load_char_classification_model():
     return char_classification_model
 
 
+@cache
 def load_x_vs_rest_model():
     """Loads the X vs Rest model."""
+    x_vs_rest_classification_model = models.regnet_y_800mf()
+    num_ftrs = x_vs_rest_classification_model.fc.in_features
+    x_vs_rest_classification_model.num_classes = 2
+    x_vs_rest_classification_model.fc = nn.Linear(num_ftrs, 2)
+    x_vs_rest_classification_model.load_state_dict(
+        torch.load("../models/x_vs_rest_classifier_regnet_y_800mf.pt")
+    )
+    x_vs_rest_classification_model.eval()
+
+    return x_vs_rest_classification_model
