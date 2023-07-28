@@ -231,6 +231,10 @@ def get_values_for_tidal_volume(
 
     Returns : A list of TidalVolume objects.
     """
+    warnings.filterwarnings("ignore")
+    observations = cluster_into_observations(boxes, tidal_volume_x_respiratory_rate)
+    warnings.filterwarnings("default")
+    return observations
 
 
 def set_strategy(strategy: str):
