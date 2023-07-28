@@ -15,7 +15,7 @@ class RespiratoryRate:
 
     chars: list
     boxes: list
-    respiratory_rate: int
+    respiratory_rate: int = None
     implausible: bool = False
 
 

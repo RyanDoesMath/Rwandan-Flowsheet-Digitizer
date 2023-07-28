@@ -15,8 +15,8 @@ class FractionOfInspiredOxygen:
 
     chars: list
     boxes: list
-    percent: int
-    timestamp: int
+    percent: int = None
+    timestamp: int = None
     implausible: bool = False
 
 

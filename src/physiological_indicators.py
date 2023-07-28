@@ -432,9 +432,6 @@ def create_gas_objects(
         new_obj = strategy.get_dataclass()(
             chars=chars[index],
             boxes=cluster_boxes,
-            percent=-1,
-            timestamp=-1,
-            implausible=False,
         )
         objs.append(new_obj)
     return objs

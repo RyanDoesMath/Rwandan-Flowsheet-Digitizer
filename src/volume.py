@@ -15,7 +15,7 @@ class Volume:
 
     chars: list
     boxes: list
-    volume: int
+    volume: int = None
     implausible: bool = False
 
 
