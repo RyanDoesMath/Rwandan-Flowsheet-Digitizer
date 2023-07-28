@@ -15,7 +15,8 @@ class Volume:
 
     chars: list
     boxes: list
-    volume: int = None
+    value: int = None
+    unit: str = "milliliters"
     implausible: bool = False
 
 

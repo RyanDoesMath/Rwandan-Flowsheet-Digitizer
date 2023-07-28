@@ -11,11 +11,15 @@ JUMP_THRESHOLD = 8
 
 @dataclass
 class RespiratoryRate:
-    """Dataclass for the respiratory rate portion of the tidal volume."""
+    """Dataclass for the respiratory rate portion of the tidal volume.
+
+    The unit for value is in breaths per minute.
+    """
 
     chars: list
     boxes: list
-    respiratory_rate: int = None
+    value: int = None
+    unit: str = "Breaths/Minute"
     implausible: bool = False
 
 

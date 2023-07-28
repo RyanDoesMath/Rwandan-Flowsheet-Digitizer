@@ -15,8 +15,9 @@ class EndTidalCarbonDioxide:
 
     chars: list
     boxes: list
-    percent: int = None
+    value: int = None
     timestamp: int = None
+    unit: str = "mmHg"
     implausible: bool = False
 
 
