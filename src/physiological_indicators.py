@@ -208,7 +208,13 @@ def get_values_for_gas_boxes(
     Returns : The actual values for the specific gas section in a list of objects.
     """
     warnings.filterwarnings("ignore")
-    strategy = set_strategy(strategy)
+    strategies = {
+        "SpO2": oxygen_saturation,
+        "EtCO2": end_tidal_carbon_dioxide,
+        "FiO2": fraction_of_inspired_oxygen,
+    }
+    strategy = strategies[strategy]
+
     observations = cluster_into_observations(boxes, strategy)
     predicted_chars = predict_values(observations, image)
     observations = create_gas_objects(observations, predicted_chars, strategy)
@@ -235,22 +241,6 @@ def get_values_for_tidal_volume(
     observations = cluster_into_observations(boxes, tidal_volume_x_respiratory_rate)
     warnings.filterwarnings("default")
     return observations
-
-
-def set_strategy(strategy: str):
-    """Sets consts and functions that will be used to extract the values from the specific section.
-
-    Args :
-        strategy - A string containing the name of the section.
-
-    Returns : The module with the strategy implemented that we need to get values for the boxes.
-    """
-    strategies = {
-        "SpO2": oxygen_saturation,
-        "EtCO2": end_tidal_carbon_dioxide,
-        "FiO2": fraction_of_inspired_oxygen,
-    }
-    return strategies[strategy]
 
 
 def cluster_into_observations(
