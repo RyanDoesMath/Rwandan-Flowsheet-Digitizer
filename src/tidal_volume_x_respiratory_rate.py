@@ -2,16 +2,7 @@
 tidal volume row of the physiological indicators."""
 
 from dataclasses import dataclass
-
-
-@dataclass
-class Volume:
-    """Dataclass for the volume portion of the tidal volume."""
-
-    chars: list
-    boxes: list
-    volume: int
-    implausible: bool = False
+import volume
 
 
 @dataclass
@@ -28,7 +19,7 @@ class RespiratoryRate:
 class TidalVolumeXRespiratoryRate:
     """Dataclass for tidal volume."""
 
-    volume: Volume
+    volume: volume.Volume
     respiratory_rate: RespiratoryRate
     timestamp: int
     implausible_tidal_volume: bool = False
