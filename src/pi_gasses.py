@@ -3,6 +3,7 @@ FiO2 that the physiological_indicators module can use to get values for the boun
 detections it made."""
 
 from typing import List
+from functools import cache
 import warnings
 from PIL import Image
 import numpy as np
@@ -16,15 +17,6 @@ from bounding_box import BoundingBox
 import oxygen_saturation
 import end_tidal_carbon_dioxide
 import fraction_of_inspired_oxygen
-
-CHAR_CLASSIFICATION_MODEL = models.regnet_y_400mf()
-num_ftrs = CHAR_CLASSIFICATION_MODEL.fc.in_features
-CHAR_CLASSIFICATION_MODEL.num_classes = 10
-CHAR_CLASSIFICATION_MODEL.fc = nn.Linear(num_ftrs, 10)
-CHAR_CLASSIFICATION_MODEL.load_state_dict(
-    torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
-)
-CHAR_CLASSIFICATION_MODEL.eval()
 
 
 def get_values_for_boxes(
@@ -140,7 +132,7 @@ def classify_image(image: Image.Image):
         ]
     )
     input_image = datatransform(image)
-    pred = CHAR_CLASSIFICATION_MODEL(input_image.unsqueeze(0)).tolist()[0]
+    pred = load_char_classification_model()(input_image.unsqueeze(0)).tolist()[0]
     return np.argmax(pred)
 
 
@@ -253,8 +245,19 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
     return observations
 
 
+@cache
 def load_char_classification_model():
     """Loads the chararacter classification model."""
+    char_classification_model = models.regnet_y_400mf()
+    num_ftrs = char_classification_model.fc.in_features
+    char_classification_model.num_classes = 10
+    char_classification_model.fc = nn.Linear(num_ftrs, 10)
+    char_classification_model.load_state_dict(
+        torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
+    )
+    char_classification_model.eval()
+
+    return char_classification_model
 
 
 def load_x_vs_rest_model():
