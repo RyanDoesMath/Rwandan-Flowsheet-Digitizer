@@ -4,6 +4,10 @@ have erroneous values dealt with, as well as which values are plausible."""
 
 from dataclasses import dataclass
 
+LOWEST_PLAUSIBLE_VALUE = 10
+HIGHEST_PLAUSIBLE_VALUE = 800
+JUMP_THRESHOLD = 200
+
 
 @dataclass
 class Volume:
