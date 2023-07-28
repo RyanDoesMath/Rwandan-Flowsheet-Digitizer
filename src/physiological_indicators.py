@@ -216,13 +216,9 @@ def get_values_for_gas_boxes(
         "FiO2": fraction_of_inspired_oxygen,
     }
     strategy = strategies[strategy]
-
     observations = cluster_into_observations(boxes, strategy)
-    predicted_chars = predict_values(observations, image)
-    observations = create_gas_objects(observations, predicted_chars, strategy)
-    observations = impute_naive_value(observations, strategy)
-    observations = flag_jumps_as_implausible(observations, strategy)
-    observations = impute_value_for_erroneous_observations(observations)
+    observations = impute_values_to_clusters(observations, image, strategy)
+
     warnings.filterwarnings("default")
     return observations
 
@@ -267,6 +263,13 @@ def impute_values_to_clusters(
 
     Returns : A list of objects containing the data.
     """
+    predicted_chars = predict_values(observations, image)
+    observations = create_gas_objects(observations, predicted_chars, strategy)
+    observations = impute_naive_value(observations, strategy)
+    observations = flag_jumps_as_implausible(observations, strategy)
+    observations = impute_value_for_erroneous_observations(observations)
+
+    return observations
 
 
 def cluster_into_observations(
