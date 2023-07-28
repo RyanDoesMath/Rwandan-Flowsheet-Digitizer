@@ -221,7 +221,7 @@ def get_values_for_gas_boxes(
 
 def get_values_for_tidal_volume(
     boxes: List[BoundingBox], image: Image.Image
-) -> List[tidal_volume_x_respiratory_rate.TidalVolume]:
+) -> List[tidal_volume_x_respiratory_rate.TidalVolumeXRespiratoryRate]:
     """Implements a strategy for getting the values for the tidal volume boxes from the
     physiological indicator section.
 
