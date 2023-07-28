@@ -17,3 +17,8 @@ class Volume:
     boxes: list
     volume: int
     implausible: bool = False
+
+
+def get_dataclass():
+    """Returns the dataclass object."""
+    return Volume
