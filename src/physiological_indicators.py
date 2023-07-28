@@ -18,6 +18,7 @@ import tiles
 import oxygen_saturation
 import end_tidal_carbon_dioxide
 import fraction_of_inspired_oxygen
+import tidal_volume
 from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
@@ -216,6 +217,20 @@ def get_values_for_gas_boxes(
     observations = impute_value_for_erroneous_observations(observations)
     warnings.filterwarnings("default")
     return observations
+
+
+def get_values_for_tidal_volume(
+    boxes: List[BoundingBox], image: Image.Image
+) -> List[tidal_volume.TidalVolume]:
+    """Implements a strategy for getting the values for the tidal volume boxes from the
+    physiological indicator section.
+
+    Args :
+        boxes - the BoundingBoxes in that section.
+        image - the image of the physiological indicators section.
+
+    Returns : A list of TidalVolume objects.
+    """
 
 
 def set_strategy(strategy: str):

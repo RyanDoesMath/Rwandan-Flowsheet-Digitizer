@@ -5,12 +5,31 @@ from dataclasses import dataclass
 
 
 @dataclass
-class TidalVolume:
-    """Dataclass for tidal volume."""
+class Volume:
+    """Dataclass for the volume portion of the tidal volume."""
+
+    chars: list
+    boxes: list
+    volume: int
+    implausible: bool = False
+
+
+@dataclass
+class RespiratoryRate:
+    """Dataclass for the respiratory rate portion of the tidal volume."""
 
     chars: list
     boxes: list
     respiratory_rate: int
-    tidal_volume: int
-    timestamp: int
     implausible: bool = False
+
+
+@dataclass
+class TidalVolume:
+    """Dataclass for tidal volume."""
+
+    volume: Volume
+    respiratory_rate: RespiratoryRate
+    timestamp: int
+    implausible_tidal_volume: bool = False
+    implausible_respiratory_rate: bool = False
