@@ -25,7 +25,7 @@ class RespiratoryRate:
 
 
 @dataclass
-class TidalVolume:
+class TidalVolumeXRespiratoryRate:
     """Dataclass for tidal volume."""
 
     volume: Volume
