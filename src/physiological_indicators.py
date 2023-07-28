@@ -472,14 +472,24 @@ def flag_jumps_as_implausible(observations: List, strategy) -> List:
         previous_obs = observations[index - 1]
         next_obs = observations[index + 1]
 
-        jump_to_next = (
-            abs(obs.value - next_obs.value) if not next_obs.implausible else 0
-        )
-        jump_from_last = (
-            abs(obs.value - previous_obs.value) if not previous_obs.implausible else 0
-        )
+        try:
+            jump_to_next = (
+                abs(obs.value - next_obs.value) if not next_obs.implausible else 0
+            )
+        except TypeError:
+            jump_to_next = np.nan
 
-        if (jump_to_next + jump_from_last) / 2 > jump_threshold:
+        try:
+            jump_from_last = (
+                abs(obs.value - previous_obs.value)
+                if not previous_obs.implausible
+                else 0
+            )
+        except TypeError:
+            jump_from_last = np.nan
+
+        average_jump = np.nanmean([jump_from_last, jump_to_next])
+        if not np.isnan(average_jump) and average_jump > jump_threshold:
             obs.implausible = True
 
     return observations
