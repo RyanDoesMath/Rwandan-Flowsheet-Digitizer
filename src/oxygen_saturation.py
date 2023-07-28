@@ -15,8 +15,9 @@ class OxygenSaturation:
 
     chars: list
     boxes: list
-    percent: int
-    timestamp: int
+    value: int = None
+    timestamp: int = None
+    unit: str = "%"
     implausible: bool = False
 
 
