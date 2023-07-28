@@ -4,6 +4,10 @@ section needs to have erroneous values dealt with, as well as which values are p
 
 from dataclasses import dataclass
 
+LOWEST_PLAUSIBLE_VALUE = 7
+HIGHEST_PLAUSIBLE_VALUE = 40
+JUMP_THRESHOLD = 8
+
 
 @dataclass
 class RespiratoryRate:

@@ -19,6 +19,8 @@ import oxygen_saturation
 import end_tidal_carbon_dioxide
 import fraction_of_inspired_oxygen
 import tidal_volume_x_respiratory_rate
+import volume
+import respiratory_rate
 from bounding_box import BoundingBox
 
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
@@ -238,6 +240,7 @@ def get_values_for_tidal_volume(
     Returns : A list of TidalVolume objects.
     """
     warnings.filterwarnings("ignore")
+    strategies = {"tidal_vol": volume, "resp_rate": respiratory_rate}
     observations = cluster_into_observations(boxes, tidal_volume_x_respiratory_rate)
     tidal_vol_obs, resp_rate_obs = separate_tidal_vol_x_f_observations(
         observations, image
