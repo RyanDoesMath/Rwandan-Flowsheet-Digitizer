@@ -473,12 +473,10 @@ def flag_jumps_as_implausible(observations: List, strategy) -> List:
         next_obs = observations[index + 1]
 
         jump_to_next = (
-            abs(obs.percent - next_obs.percent) if not next_obs.implausible else 0
+            abs(obs.value - next_obs.value) if not next_obs.implausible else 0
         )
         jump_from_last = (
-            abs(obs.percent - previous_obs.percent)
-            if not previous_obs.implausible
-            else 0
+            abs(obs.value - previous_obs.value) if not previous_obs.implausible else 0
         )
 
         if (jump_to_next + jump_from_last) / 2 > jump_threshold:
@@ -504,7 +502,7 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
                 if observations[surrounding_index].implausible:
                     continue
                 surrounding_observations.append(
-                    (surrounding_index - 2, observations[surrounding_index].percent)
+                    (surrounding_index - 2, observations[surrounding_index].value)
                 )
             except IndexError:
                 pass
@@ -513,7 +511,7 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
             x_values = [[x[0]] for x in surrounding_observations]
             y_values = [[y[1]] for y in surrounding_observations]
             linreg = LinearRegression().fit(x_values, y_values)
-            observations[index].percent = int(
+            observations[index].value = int(
                 round(linreg.predict([[0]]).tolist()[0][0], 0)
             )
 
