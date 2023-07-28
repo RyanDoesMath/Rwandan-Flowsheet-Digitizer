@@ -245,10 +245,23 @@ def get_values_for_tidal_volume(
         "tidal_vol": tidal_vol_obs,
         "resp_rate": resp_rate_obs,
     }
+
     for part in ["tidal_vol", "resp_rate"]:
-        pass
+        strategy = strategies[part]
+        obs = observations[part]
+        observations[part] = impute_values_to_clusters(obs, image, strategy)
+    observations = list(zip(observations["tidal_vol"], observations["resp_rate"]))
+
+    tidal_volume_objects = []
+    for tidal_vol, resp_rate in observations:
+        tidal_vol_x_resp_rate = (
+            tidal_volume_x_respiratory_rate.TidalVolumeXRespiratoryRate(
+                volume=tidal_vol, respiratory_rate=resp_rate, timestamp=-1
+            )
+        )
+        tidal_volume_objects.append(tidal_vol_x_resp_rate)
     warnings.filterwarnings("default")
-    return observations
+    return tidal_volume_objects
 
 
 def impute_values_to_clusters(

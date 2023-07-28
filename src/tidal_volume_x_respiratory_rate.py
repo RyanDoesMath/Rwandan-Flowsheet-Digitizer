@@ -14,8 +14,6 @@ class TidalVolumeXRespiratoryRate:
     volume: volume.Volume
     respiratory_rate: respiratory_rate.RespiratoryRate
     timestamp: int
-    implausible_tidal_volume: bool = False
-    implausible_respiratory_rate: bool = False
 
 
 def get_limits_for_number_of_clusters(number_of_boxes: int) -> Tuple[int]:
