@@ -191,7 +191,10 @@ def get_values_for_boxes(
         "Tidal_VolxF": get_values_for_tidal_volume,
     }
     try:
-        return strategies[section_name](boxes, image, section_name)
+        if section_name != "Tidal_VolxF":
+            return strategies[section_name](boxes, image, section_name)
+        else:
+            return strategies[section_name](boxes, image)
     except KeyError:
         print(f"{section_name} has not been implemented yet.")
         return None
