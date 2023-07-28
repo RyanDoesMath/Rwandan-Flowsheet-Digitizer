@@ -1,7 +1,7 @@
 """The physiological_indicators module extracts the data from the
 physiological indicator section of the Rwandan flowsheet using YOLOv8."""
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from functools import cache
 import warnings
 import numpy as np
@@ -239,6 +239,7 @@ def get_values_for_tidal_volume(
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes, tidal_volume_x_respiratory_rate)
+    tidal_vol_obs, resp_rate_obs = separate_tidal_vol_x_f_observations(observations)
     warnings.filterwarnings("default")
     return observations
 
@@ -279,6 +280,19 @@ def cluster_into_observations(
         key=lambda cluster: np.mean([bb.get_x_center() for bb in cluster])
     )
     return sorted_boxes
+
+
+def separate_tidal_vol_x_f_observations(
+    observations: List[List[BoundingBox]],
+) -> Tuple[List[List[BoundingBox]], List[List[BoundingBox]]]:
+    """Separates the tidal volume numbers that are before the x from the respiratory rate numbers
+    that come after the x in the TidalVolxF row of the physiological indicators section.
+
+    Args :
+        observations - The bounding box clusters identified by cluster_into_observations.
+
+    Returns : Two lists of BoundingBoxes separated into (tidal_vol, resp_rate).
+    """
 
 
 def predict_values(
