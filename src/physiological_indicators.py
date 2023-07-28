@@ -239,7 +239,9 @@ def get_values_for_tidal_volume(
     """
     warnings.filterwarnings("ignore")
     observations = cluster_into_observations(boxes, tidal_volume_x_respiratory_rate)
-    tidal_vol_obs, resp_rate_obs = separate_tidal_vol_x_f_observations(observations)
+    tidal_vol_obs, resp_rate_obs = separate_tidal_vol_x_f_observations(
+        observations, image
+    )
     warnings.filterwarnings("default")
     return observations
 
@@ -283,16 +285,41 @@ def cluster_into_observations(
 
 
 def separate_tidal_vol_x_f_observations(
-    observations: List[List[BoundingBox]],
+    observations: List[List[BoundingBox]], image: Image.Image
 ) -> Tuple[List[List[BoundingBox]], List[List[BoundingBox]]]:
     """Separates the tidal volume numbers that are before the x from the respiratory rate numbers
     that come after the x in the TidalVolxF row of the physiological indicators section.
 
     Args :
         observations - The bounding box clusters identified by cluster_into_observations.
+        image - A PIL image of the physiological indicators section.
 
     Returns : Two lists of BoundingBoxes separated into (tidal_vol, resp_rate).
     """
+    tidal_vol_bboxes = []
+    resp_rate_bboxes = []
+
+    for cluster in observations:
+        bbox_crops = [image.crop(bb.get_box()) for bb in cluster]
+        probabilities_that_bbox_is_x = [
+            classify_image(crop, model="x_vs_rest") for crop in bbox_crops
+        ]
+        x_index = np.argmax(probabilities_that_bbox_is_x)
+        plausible_x_indices = [2, 3, 4, 5]  # never observed x outside these indices.
+        if x_index in plausible_x_indices:
+            tidal_vol_bboxes.append(cluster[0:x_index])
+            resp_rate_bboxes.append(cluster[x_index + 1 :])
+            continue
+        if len(cluster) == 6:
+            # if it is length 6 (the standard length), its probably VVVxRR.
+            tidal_vol_bboxes.append(cluster[0:3])
+            resp_rate_bboxes.append(cluster[4:])
+            continue
+        # if it isn't length 6 (the standard length), we don't know how to split it...
+        tidal_vol_bboxes.append(None)
+        resp_rate_bboxes.append(None)
+
+    return tidal_vol_bboxes, resp_rate_bboxes
 
 
 def predict_values(
@@ -319,8 +346,13 @@ def predict_values(
     return chars
 
 
-def classify_image(image: Image.Image):
-    """Uses a CNN to classify a PIL Image."""
+def classify_image(image: Image.Image, model: str = "char"):
+    """Uses a CNN to classify a PIL Image.
+
+    Args:
+        image - A PIL image of the physiological indicators section.
+        model - A string determining the model to use ["char", "x_vs_rest"] defaults to "char".
+    """
     datatransform = transforms.Compose(
         [
             transforms.Resize(size=(40, 40)),
@@ -329,7 +361,13 @@ def classify_image(image: Image.Image):
         ]
     )
     input_image = datatransform(image)
-    pred = load_char_classification_model()(input_image.unsqueeze(0)).tolist()[0]
+    if model == "char":
+        model = load_char_classification_model()
+    elif model == "x_vs_rest":
+        model = load_x_vs_rest_model()
+    else:
+        raise ValueError(f"Invalid parameter for model:{model}")
+    pred = model(input_image.unsqueeze(0)).tolist()[0]
     return np.argmax(pred)
 
 
