@@ -245,8 +245,28 @@ def get_values_for_tidal_volume(
     tidal_vol_obs, resp_rate_obs = separate_tidal_vol_x_f_observations(
         observations, image
     )
+    observations = {
+        "tidal_vol": tidal_vol_obs,
+        "resp_rate": resp_rate_obs,
+    }
+    for part in ["tidal_vol", "resp_rate"]:
+        pass
     warnings.filterwarnings("default")
     return observations
+
+
+def impute_values_to_clusters(
+    observations: List[List[BoundingBox]], image: Image.Image, strategy
+):
+    """Imputes values to clustered BoundingBoxes given a strategy.
+
+    Args :
+        observations - The BoundingBoxes clustered into obeservations.
+        image - The PIL Image of the physiological indicators section.
+        strategy - The module with data for the particular row's strategy..
+
+    Returns : A list of objects containing the data.
+    """
 
 
 def cluster_into_observations(
