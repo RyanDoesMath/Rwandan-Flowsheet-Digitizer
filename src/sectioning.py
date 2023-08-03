@@ -1,8 +1,9 @@
 """The sectioning module contains methods for identifying and cropping the
 individual sections for other modules to be able to use."""
 
+from typing import List
 from ultralytics import YOLO
-import pandas as pd
+from bounding_box import BoundingBox
 
 SECTIONING_MODEL = YOLO("../models/section_cropper_yolov8.pt")
 
@@ -27,49 +28,56 @@ def extract_sections(image) -> dict:
         and PIL image values corresponding to the key section.
     """
     preds = SECTIONING_MODEL(image, verbose=False)
-    preds_df = make_predictions_into_dataframe(preds)
-    preds_df = filter_section_predictions(preds_df)
+    preds = make_preds_into_boundingboxes(preds)
+    preds = filter_section_predictions(preds)
+
+    names = {
+        0.0: "iv_drugs",
+        1.0: "inhaled_drugs",
+        2.0: "iv_fluids",
+        3.0: "transfusion",
+        4.0: "blood_pressure_and_heart_rate",
+        5.0: "physiological_indicators",
+        6.0: "checkboxes",
+    }
+
     sections = {}
-    for _, box in preds_df.iterrows():
-        crop_coords = box[["left", "top", "right", "bottom"]].tolist()
-        name = box["class"]
+    for box in preds:
+        crop_coords = box.get_box()
+        name = names[box.predicted_class]
         sections[name] = image.crop(crop_coords)
     return sections
 
 
-def make_predictions_into_dataframe(preds):
-    """Converts YOLOv8 predictions into a dataframe.
+def make_preds_into_boundingboxes(preds) -> List[BoundingBox]:
+    """Creates BoundingBox objects for every prediction.
 
-    Parameters:
-        preds - a YOLOv8 predictions object.
+    Args :
+        preds - the yolov8 predictions.
 
-    Returns : the predictions in a pandas dataframe.
+    Returns : A list of BoundingBox objects.
     """
-    cols = ["left", "top", "right", "bottom", "confidence", "class"]
-    names_dict = preds[0].names
-    index_of_class_in_box = -1
-    preds_df = pd.DataFrame(columns=cols)
-    for box in preds[0].boxes.data:
-        data = box.tolist()
-        data[index_of_class_in_box] = names_dict[data[index_of_class_in_box]]
-        new_row = pd.DataFrame(data=[data], columns=cols)
-        preds_df = pd.concat([preds_df, new_row])
-    preds_df.reset_index(inplace=True, drop=True)
-    return preds_df
+    bboxes = []
+    for box in preds[0].boxes.data.tolist():
+        bboxes.append(BoundingBox(box[0], box[1], box[2], box[3], box[5], box[4]))
+    return bboxes
 
 
-def filter_section_predictions(preds_df):
+def filter_section_predictions(preds: List[BoundingBox]) -> List[BoundingBox]:
     """Chooses the prediction with higher confidence if there are duplicates.
 
     Parameters:
-        preds_df - a dataframe with the section predictions.
+        preds - a list of BoundingBoxes of the detections.
 
     Returns : a filtered dataframe with a unique row per predicted section.
     """
-    changed_df = pd.DataFrame(columns=preds_df.columns)
-    for class_name in preds_df["class"].unique().tolist():
-        temp_df = preds_df[preds_df["class"] == class_name]
-        temp_df.sort_values("confidence", ascending=False)
-        if len(temp_df) > 0:
-            changed_df = pd.concat([changed_df, pd.DataFrame(temp_df.iloc[0]).T])
-    return changed_df
+    max_preds = []
+    unique_classes = list(set([p.predicted_class for p in preds]))
+    for unique_class in unique_classes:
+        boxes_of_class = list(
+            filter(lambda box: box.predicted_class == unique_class, preds)
+        )
+        boxes_of_class = sorted(boxes_of_class, key=lambda x: x.confidence)
+        max_preds.append(boxes_of_class[0])
+
+    return max_preds
