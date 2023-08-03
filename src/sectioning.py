@@ -2,6 +2,7 @@
 individual sections for other modules to be able to use."""
 
 from typing import List
+from PIL import Image, ImageDraw
 from ultralytics import YOLO
 from bounding_box import BoundingBox
 
@@ -11,7 +12,7 @@ SECTIONING_MODEL = YOLO("../models/section_cropper_yolov8.pt")
 def extract_sections(image) -> dict:
     """Uses a yolov8 model to crop out the 7 sections of the Rwandan flowsheet.
 
-    Parameters :
+    Args :
         image - A PIL image of the whole flowsheet post-homography correction.
 
     Returns :
@@ -81,3 +82,27 @@ def filter_section_predictions(preds: List[BoundingBox]) -> List[BoundingBox]:
         max_preds.append(boxes_of_class[0])
 
     return max_preds
+
+
+def show_detections(image: Image.Image) -> Image.Image:
+    """Draws rectangles on the image where detections are made."""
+    colors = {
+        0.0: "#b37486",
+        1.0: "#e7a29c",
+        2.0: "#7c98a6",
+        3.0: "#d67d53",
+        4.0: "#5b9877",
+        5.0: "#534d6b",
+        6.0: "#e6bd57",
+    }
+
+    preds = SECTIONING_MODEL(image, verbose=False)
+    preds = make_preds_into_boundingboxes(preds)
+    preds = filter_section_predictions(preds)
+
+    img_copy = image.copy()
+    draw = ImageDraw.Draw(img_copy)
+    for box in preds:
+        draw.rectangle(box.get_box(), outline=colors[box.predicted_class], width=2)
+
+    return img_copy
