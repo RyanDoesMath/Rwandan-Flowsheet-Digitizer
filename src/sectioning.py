@@ -85,7 +85,13 @@ def filter_section_predictions(preds: List[BoundingBox]) -> List[BoundingBox]:
 
 
 def show_detections(image: Image.Image) -> Image.Image:
-    """Draws rectangles on the image where detections are made."""
+    """Draws rectangles on the image where detections are made.
+
+    Parameters:
+        image - A PIL Image of the whole sheet.
+
+    Returns : An image with colored rectangles drawn around the detections.
+    """
     colors = {
         0.0: "#b37486",
         1.0: "#e7a29c",
@@ -106,3 +112,30 @@ def show_detections(image: Image.Image) -> Image.Image:
         draw.rectangle(box.get_box(), outline=colors[box.predicted_class], width=2)
 
     return img_copy
+
+
+def make_yolo_formatted_predictions(image: Image.Image) -> str:
+    """Makes predictions then exports them to yolo format.
+
+    Parameters:
+        image - A PIL Image of the whole sheet.
+
+    Returns : A string that contains YOLO formatted predictions.
+    """
+    preds = SECTIONING_MODEL(image, verbose=False)
+    preds = make_preds_into_boundingboxes(preds)
+    preds = filter_section_predictions(preds)
+
+    width, height = image.size
+    label = ""
+    for index, box in enumerate(preds):
+        predicted_class = int(box.predicted_class)
+        box_x = round(float(box.get_x_center()) / width, 6)
+        box_y = round(float(box.get_y_center()) / height, 6)
+        box_width = round(float(box.get_width()) / width, 6)
+        box_height = round(float(box.get_height()) / height, 6)
+        label += f"{predicted_class} {box_x} {box_y} {box_width} {box_height}"
+        if index != len(preds) - 1:
+            label += "\n"
+
+    return label
