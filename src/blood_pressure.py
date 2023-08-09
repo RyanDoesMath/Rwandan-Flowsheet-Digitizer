@@ -722,3 +722,15 @@ def show_detections(image):
     for box in diastolic_pred:
         draw.rectangle(box.get_box(), outline="#6c799c")
     return img
+
+
+def show_detections_30_200(image: Image.Image):
+    """Draws the 30 200 detections on the image."""
+    img = preprocess_image(image).copy()
+    width, height = img.size
+    img = img.crop([0, 0, width // 5, height])
+    bboxes = TWOHUNDRED_THIRTY_MODEL(img, verbose=False)[0].boxes.data.tolist()
+    draw = ImageDraw.Draw(img)
+    for bbox in bboxes:
+        draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], width=2, outline="black")
+    return img
