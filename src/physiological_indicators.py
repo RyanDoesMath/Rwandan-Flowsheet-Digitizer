@@ -531,12 +531,12 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
 @cache
 def load_char_classification_model():
     """Loads the chararacter classification model."""
-    char_classification_model = models.regnet_y_400mf()
+    char_classification_model = models.regnet_y_128gf()
     num_ftrs = char_classification_model.fc.in_features
     char_classification_model.num_classes = 10
     char_classification_model.fc = nn.Linear(num_ftrs, 10)
     char_classification_model.load_state_dict(
-        torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
+        torch.load("../models/zero_to_nine_char_classifier_regnet_y_128gf.pt")
     )
     char_classification_model.eval()
 
