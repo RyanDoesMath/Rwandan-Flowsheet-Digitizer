@@ -27,12 +27,12 @@ from bounding_box import BoundingBox
 @cache
 def load_char_classification_model():
     """Loads the chararacter classification model."""
-    char_classification_model = models.regnet_y_128gf()
+    char_classification_model = models.regnet_y_1_6gf()
     num_ftrs = char_classification_model.fc.in_features
     char_classification_model.num_classes = 10
     char_classification_model.fc = nn.Linear(num_ftrs, 10)
     char_classification_model.load_state_dict(
-        torch.load("../models/zero_to_nine_char_classifier_regnet_y_128gf.pt")
+        torch.load("../models/zero_to_nine_char_classifier_regnet_1_6_gf.pt")
     )
     char_classification_model.eval()
 
