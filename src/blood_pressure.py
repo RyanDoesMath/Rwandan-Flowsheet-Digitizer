@@ -12,7 +12,7 @@ import tiles
 import deshadow
 from bounding_box import BoundingBox
 
-BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8l.pt")
 TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8l.pt")
 BP_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
