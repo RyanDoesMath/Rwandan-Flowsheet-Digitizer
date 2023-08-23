@@ -23,6 +23,39 @@ import volume
 import respiratory_rate
 from bounding_box import BoundingBox
 
+
+@cache
+def load_char_classification_model():
+    """Loads the chararacter classification model."""
+    char_classification_model = models.regnet_y_1_6gf()
+    num_ftrs = char_classification_model.fc.in_features
+    char_classification_model.num_classes = 10
+    char_classification_model.fc = nn.Linear(num_ftrs, 10)
+    char_classification_model.load_state_dict(
+        torch.load("../models/zero_to_nine_char_classifier_regnet_1_6_gf.pt")
+    )
+    char_classification_model.eval()
+
+    return char_classification_model
+
+
+@cache
+def load_x_vs_rest_model():
+    """Loads the X vs Rest model."""
+    x_vs_rest_classification_model = models.regnet_y_800mf()
+    num_ftrs = x_vs_rest_classification_model.fc.in_features
+    x_vs_rest_classification_model.num_classes = 2
+    x_vs_rest_classification_model.fc = nn.Linear(num_ftrs, 2)
+    x_vs_rest_classification_model.load_state_dict(
+        torch.load("../models/x_vs_rest_classifier_regnet_y_800mf.pt")
+    )
+    x_vs_rest_classification_model.eval()
+
+    return x_vs_rest_classification_model
+
+
+CHAR_CLASSIFICATION_MODEL = load_char_classification_model()
+X_VS_REST_MODEL = load_x_vs_rest_model()
 SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
@@ -343,6 +376,7 @@ def separate_tidal_vol_x_f_observations(
     resp_rate_bboxes = []
 
     for cluster in observations:
+        cluster = sorted(cluster, key=lambda box: box.get_x_center())
         bbox_crops = [image.crop(bb.get_box()) for bb in cluster]
         probabilities_that_bbox_is_x = [
             classify_image(crop, model="x_vs_rest") for crop in bbox_crops
@@ -405,9 +439,9 @@ def classify_image(image: Image.Image, model: str = "char"):
     )
     input_image = datatransform(image)
     if model == "char":
-        model = load_char_classification_model()
+        model = CHAR_CLASSIFICATION_MODEL
     elif model == "x_vs_rest":
-        model = load_x_vs_rest_model()
+        model = X_VS_REST_MODEL
     else:
         raise ValueError(f"Invalid parameter for model:{model}")
     pred = model(input_image.unsqueeze(0)).tolist()[0]
@@ -526,36 +560,6 @@ def impute_value_for_erroneous_observations(observations: List) -> List:
             )
 
     return observations
-
-
-@cache
-def load_char_classification_model():
-    """Loads the chararacter classification model."""
-    char_classification_model = models.regnet_y_400mf()
-    num_ftrs = char_classification_model.fc.in_features
-    char_classification_model.num_classes = 10
-    char_classification_model.fc = nn.Linear(num_ftrs, 10)
-    char_classification_model.load_state_dict(
-        torch.load("../models/zero_to_nine_char_classifier_regnet_y_400mf.pt")
-    )
-    char_classification_model.eval()
-
-    return char_classification_model
-
-
-@cache
-def load_x_vs_rest_model():
-    """Loads the X vs Rest model."""
-    x_vs_rest_classification_model = models.regnet_y_800mf()
-    num_ftrs = x_vs_rest_classification_model.fc.in_features
-    x_vs_rest_classification_model.num_classes = 2
-    x_vs_rest_classification_model.fc = nn.Linear(num_ftrs, 2)
-    x_vs_rest_classification_model.load_state_dict(
-        torch.load("../models/x_vs_rest_classifier_regnet_y_800mf.pt")
-    )
-    x_vs_rest_classification_model.eval()
-
-    return x_vs_rest_classification_model
 
 
 def show_detections(image: Image.Image) -> Image.Image:

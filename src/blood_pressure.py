@@ -12,8 +12,8 @@ import tiles
 import deshadow
 from bounding_box import BoundingBox
 
-BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8s.pt")
-TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8s.pt")
+BLOOD_PRESSURE_MODEL = YOLO("../models/bp_model_yolov8l.pt")
+TWOHUNDRED_THIRTY_MODEL = YOLO("../models/30_200_detector_yolov8l.pt")
 BP_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
 
@@ -721,4 +721,16 @@ def show_detections(image):
         draw.rectangle(box.get_box(), outline="#fbb584")
     for box in diastolic_pred:
         draw.rectangle(box.get_box(), outline="#6c799c")
+    return img
+
+
+def show_detections_30_200(image: Image.Image):
+    """Draws the 30 200 detections on the image."""
+    img = preprocess_image(image).copy()
+    width, height = img.size
+    img = img.crop([0, 0, width // 5, height])
+    bboxes = TWOHUNDRED_THIRTY_MODEL(img, verbose=False)[0].boxes.data.tolist()
+    draw = ImageDraw.Draw(img)
+    for bbox in bboxes:
+        draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], width=2, outline="black")
     return img

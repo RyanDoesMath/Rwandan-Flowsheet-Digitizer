@@ -5,7 +5,7 @@ predictions, allowing other code which uses tiles to not
 worry about the implementation of image tiling."""
 
 from typing import List
-from PIL import ImageDraw
+from PIL import Image, ImageDraw
 from bounding_box import BoundingBox
 
 
@@ -307,3 +307,46 @@ def show_detections(
     for box in preds:
         draw.rectangle(box.get_box(), outline="blue")
     return img
+
+
+def make_yolo_formatted_predictions(
+    model,
+    image: Image.Image,
+    rows: int,
+    columns: int,
+    stride: float,
+    overlap_tolerance: float,
+    remove_non_square: bool = False,
+    strategy: str = "iou",
+) -> str:
+    """Makes predictions then exports them to yolo format.
+
+    Parameters:
+        image - A PIL Image of the whole sheet.
+
+    Returns : A string that contains YOLO formatted predictions.
+    """
+    preds = tile_predict(
+        model,
+        image,
+        rows,
+        columns,
+        stride,
+        overlap_tolerance,
+        remove_non_square,
+        strategy,
+    )
+
+    width, height = image.size
+    label = ""
+    for index, box in enumerate(preds):
+        predicted_class = int(box.predicted_class)
+        box_x = round(float(box.get_x_center()) / width, 6)
+        box_y = round(float(box.get_y_center()) / height, 6)
+        box_width = round(float(box.get_width()) / width, 6)
+        box_height = round(float(box.get_height()) / height, 6)
+        label += f"{predicted_class} {box_x} {box_y} {box_width} {box_height}"
+        if index != len(preds) - 1:
+            label += "\n"
+
+    return label

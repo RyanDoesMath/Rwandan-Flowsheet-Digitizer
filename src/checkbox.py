@@ -8,7 +8,7 @@ import tiles
 from bounding_box import BoundingBox
 
 CHECKBOX_TILE_DATA = {"ROWS": 1, "COLUMNS": 8, "STRIDE": 1 / 2}
-CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8m.pt")
+CHECKBOX_MODEL = YOLO("../models/checkbox_yolov8l.pt")
 
 
 def extract_checkboxes(image: Image.Image) -> Dict[str, bool]:
