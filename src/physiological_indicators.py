@@ -376,6 +376,7 @@ def separate_tidal_vol_x_f_observations(
     resp_rate_bboxes = []
 
     for cluster in observations:
+        cluster = sorted(cluster, key=lambda box: box.get_x_center())
         bbox_crops = [image.crop(bb.get_box()) for bb in cluster]
         probabilities_that_bbox_is_x = [
             classify_image(crop, model="x_vs_rest") for crop in bbox_crops
