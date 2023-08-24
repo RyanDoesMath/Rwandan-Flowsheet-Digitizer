@@ -347,7 +347,7 @@ def propose_array_of_bp_lines(image: Image.Image) -> np.array:
     cropped_img = image.crop([0, 0, width // 5, height])
     dets = TWOHUNDRED_THIRTY_MODEL(cropped_img, verbose=False)[0].boxes.data.tolist()
     loc_200 = sorted(list(filter(lambda x: x[5] == 1.0, dets)), key=lambda x: x[4])[0]
-    loc_200 = loc_200[1] + (loc_200[3] - loc_200[1]) / 2
+    loc_200 = loc_200[1] + (loc_200[3] - loc_200[1]) / 1.5
 
     loc_30 = sorted(list(filter(lambda x: x[5] == 0.0, dets)), key=lambda x: x[4])[0]
     adjust = int(round(loc_30[1], 0))
