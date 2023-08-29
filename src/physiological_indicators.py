@@ -486,6 +486,10 @@ def impute_naive_value(observations: List, strategy) -> List:
     lowest_plausible_value = strategy.LOWEST_PLAUSIBLE_VALUE
     highest_plausible_value = strategy.HIGHEST_PLAUSIBLE_VALUE
     for obs in observations:
+        if obs.chars == "":
+            obs.value = None
+            obs.implausible = True
+            continue
         naive_value = int("".join([str(x) for x in obs.chars]))
         if lowest_plausible_value <= naive_value <= highest_plausible_value:
             obs.value = naive_value
