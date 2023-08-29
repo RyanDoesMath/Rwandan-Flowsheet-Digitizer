@@ -56,7 +56,7 @@ def load_x_vs_rest_model():
 
 CHAR_CLASSIFICATION_MODEL = load_char_classification_model()
 X_VS_REST_MODEL = load_x_vs_rest_model()
-SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
+SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8l.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
 
