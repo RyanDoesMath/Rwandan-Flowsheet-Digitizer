@@ -345,6 +345,8 @@ def cluster_into_observations(
 
     scores = {}
     for val in range(lower_lim, upper_lim + 1):
+        if val < 2:
+            continue
         kmeans = KMeans(n_init=10, n_clusters=val).fit(x_centers)
         preds = kmeans.fit_predict(x_centers)
         scores[val] = silhouette_score(x_centers, preds)
