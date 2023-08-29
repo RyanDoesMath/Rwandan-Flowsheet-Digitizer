@@ -414,6 +414,8 @@ def predict_values(
 
     for cluster in observations:
         cluster_chars = []
+        if cluster is None:
+            continue
         cluster.sort(key=lambda bb: bb.get_x_center())
         for bbox in cluster:
             single_char_img = image.crop(bbox.get_box())
