@@ -285,7 +285,7 @@ def get_values_for_tidal_volume(
 
     for part in ["tidal_vol", "resp_rate"]:
         strategy = strategies[part]
-        obs = observations[part]
+        obs = list(filter(lambda x: x is not None, observations[part]))
         observations[part] = impute_values_to_clusters(obs, image, strategy)
     observations = list(zip(observations["tidal_vol"], observations["resp_rate"]))
 
@@ -414,8 +414,6 @@ def predict_values(
 
     for cluster in observations:
         cluster_chars = []
-        if cluster is None:
-            continue
         cluster.sort(key=lambda bb: bb.get_x_center())
         for bbox in cluster:
             single_char_img = image.crop(bbox.get_box())
