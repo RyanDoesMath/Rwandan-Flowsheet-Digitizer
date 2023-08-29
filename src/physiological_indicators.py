@@ -350,8 +350,10 @@ def cluster_into_observations(
         kmeans = KMeans(n_init=10, n_clusters=val).fit(x_centers)
         preds = kmeans.fit_predict(x_centers)
         scores[val] = silhouette_score(x_centers, preds)
-
-    best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
+    if len(scores) == 0:
+        best_cluster_value = 1
+    else:
+        best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
     kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(x_centers)
     preds = kmeans.fit_predict(x_centers)
     masks = [[True if x == u else False for x in preds] for u in np.unique(preds)]
