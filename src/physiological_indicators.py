@@ -56,7 +56,7 @@ def load_x_vs_rest_model():
 
 CHAR_CLASSIFICATION_MODEL = load_char_classification_model()
 X_VS_REST_MODEL = load_x_vs_rest_model()
-SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8s.pt")
+SINGLE_CHAR_MODEL = YOLO("../models/single_char_physio_detector_yolov8l.pt")
 PHYSIOLOGICAL_INDICATOR_TILE_DATA = {"ROWS": 2, "COLUMNS": 8, "STRIDE": 1 / 2}
 
 
@@ -285,7 +285,7 @@ def get_values_for_tidal_volume(
 
     for part in ["tidal_vol", "resp_rate"]:
         strategy = strategies[part]
-        obs = observations[part]
+        obs = list(filter(lambda x: x is not None, observations[part]))
         observations[part] = impute_values_to_clusters(obs, image, strategy)
     observations = list(zip(observations["tidal_vol"], observations["resp_rate"]))
 
@@ -345,11 +345,15 @@ def cluster_into_observations(
 
     scores = {}
     for val in range(lower_lim, upper_lim + 1):
+        if val < 2:
+            continue
         kmeans = KMeans(n_init=10, n_clusters=val).fit(x_centers)
         preds = kmeans.fit_predict(x_centers)
         scores[val] = silhouette_score(x_centers, preds)
-
-    best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
+    if len(scores) == 0:
+        best_cluster_value = 1
+    else:
+        best_cluster_value = max(zip(scores.values(), scores.keys()))[1]
     kmeans = KMeans(n_init=10, n_clusters=best_cluster_value).fit(x_centers)
     preds = kmeans.fit_predict(x_centers)
     masks = [[True if x == u else False for x in preds] for u in np.unique(preds)]
@@ -482,6 +486,10 @@ def impute_naive_value(observations: List, strategy) -> List:
     lowest_plausible_value = strategy.LOWEST_PLAUSIBLE_VALUE
     highest_plausible_value = strategy.HIGHEST_PLAUSIBLE_VALUE
     for obs in observations:
+        if obs.chars == "":
+            obs.value = None
+            obs.implausible = True
+            continue
         naive_value = int("".join([str(x) for x in obs.chars]))
         if lowest_plausible_value <= naive_value <= highest_plausible_value:
             obs.value = naive_value

@@ -2,10 +2,10 @@
 pressure section of the Rwandan flowsheet using YOLOv8."""
 
 import warnings
+import math
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageOps
-import cv2
 import numpy as np
 from ultralytics import YOLO
 import tiles
@@ -114,10 +114,10 @@ def remove_legend_predictions(
     """
     try:
         box_and_class = make_legend_predictions(image)
-        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+        two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
     except ValueError:
         box_and_class = make_legend_predictions(preprocess_image(image))
-        two_hundred_box, thirty_box = get_twohundred_and_thirty_box(box_and_class)
+        two_hundred_box, _ = get_twohundred_and_thirty_box(box_and_class)
     sys_pred = list(filter(lambda box: box.left > two_hundred_box.right, sys_pred))
     dia_pred = list(filter(lambda box: box.left > two_hundred_box.right, dia_pred))
     return sys_pred, dia_pred
@@ -252,18 +252,16 @@ def find_bp_value_for_bbox(
     Returns:
         A list of predicted values to put into a column of the dataframe.
     """
-
+    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(image)
     cropped_image = crop_legend_out(image)
     cropped_image = preprocess_image(cropped_image)
     cropped_image = cropped_image.crop(
         [0, 0, cropped_image.width // 6, cropped_image.height]
     )
     cropped_image = ImageOps.invert(cropped_image)
-    horizontal_lines = extract_horizontal_lines(cropped_image)
     blood_pressure_predictions = adjust_boxes_for_margins(
         image, blood_pressure_predictions
     )
-    bp_values_for_y_pixel = get_bp_values_for_all_y_pixels(horizontal_lines)
     for blood_pressure in blood_pressure_predictions:
         has_systolic = blood_pressure.systolic_box is not None
         has_diastolic = blood_pressure.diastolic_box is not None
@@ -283,37 +281,6 @@ def find_bp_value_for_bbox(
     return blood_pressure_predictions
 
 
-def extract_horizontal_lines(image):
-    """Binarizes an image and removes everything except horizontal lines.
-
-    Args :
-        image - The PIL image to extract the horizontal lines from
-
-    Returns: A PIL image that is binarized and has only horizontal lines.
-    """
-    cv2_img = deshadow.pil_to_cv2(image)
-    grey = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.bitwise_not(grey)
-    black_and_white = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2
-    )
-    horizontal = np.copy(black_and_white)
-    # Specify size on horizontal axis
-    cols = horizontal.shape[1]
-    horizontal_size = cols // 50
-    # Create structure element for extracting horizontal lines through morphology operations
-    horizontal_structure = cv2.getStructuringElement(
-        cv2.MORPH_RECT, (horizontal_size, 1)
-    )
-    # Apply morphology operations
-    horizontal = cv2.erode(horizontal, horizontal_structure)
-    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
-    horizontal = cv2.erode(horizontal, horizontal_structure)
-    horizontal = cv2.dilate(horizontal, horizontal_structure, iterations=3)
-    horizontal = cv2.bitwise_not(horizontal)
-    return horizontal
-
-
 def get_bp_values_for_all_y_pixels(image):
     """Finds the BP values associated with all y-pixels in the image.
 
@@ -322,8 +289,7 @@ def get_bp_values_for_all_y_pixels(image):
 
     Returns : a list with a BP value for every y-pixel.
     """
-    y_hist = get_y_axis_histogram(image)
-    proposed_bp_lines = propose_array_of_bp_lines(y_hist)
+    proposed_bp_lines = propose_array_of_bp_lines(image)
     bp_lines = correct_array_of_bp_lines(proposed_bp_lines)
     bp_array = apply_bp_values_to_lines(bp_lines)
     return bp_array
@@ -352,43 +318,53 @@ def get_y_axis_histogram(image):
     return y_axis_hist
 
 
-def propose_array_of_bp_lines(bp_hist: np.array) -> np.array:
-    """Proposes an array where 0 indicates space between the BP demarkations,
-    and 1 indicates a line that demarkates where 10 mmHg have changed, that is
-    the location of the horizontal lines that encode blood pressure.
-
-    Uses a binary search for thresholds for performance.
-
-    Args :
-        bp_hist - the binarized histogram of the BP image with horizontal lines
-        extracted.
+def propose_array_of_bp_lines(image: Image.Image) -> np.array:
+    """
 
     Returns : An array of 0s and 1s with proposed locations for the lines.
     """
-    num_of_lines_on_sheet = 18
-    high_threshold = max(bp_hist)
-    low_threshold = 0
-    threshold = (high_threshold + low_threshold) // 2
-    threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
-    number_of_contiguous_array_sections = len(
-        get_contiguous_array_sections(threshed_hist)
-    )
-    iters = 0
-    while number_of_contiguous_array_sections != num_of_lines_on_sheet:
-        if number_of_contiguous_array_sections < num_of_lines_on_sheet:
-            high_threshold = threshold
-        if number_of_contiguous_array_sections > num_of_lines_on_sheet:
-            low_threshold = threshold
-        threshold = (high_threshold + low_threshold) // 2
-        threshed_hist = [0 if x < threshold else 1 for x in bp_hist]
-        number_of_contiguous_array_sections = len(
-            get_contiguous_array_sections(threshed_hist)
-        )
-        if iters == 50:
-            warnings.warn("Could not find value of threshold for 18 bp lines.")
-            break
-        iters += 1
-    return threshed_hist
+    horizontal_line_intervals = [
+        (0.0, 0.0),
+        (0.056533251056695474, 0.06159073783571166),
+        (0.11542740402874478, 0.12028660897067465),
+        (0.17484168058745772, 0.17901180589936436),
+        (0.23311291446062804, 0.23889253107716374),
+        (0.29400319231533045, 0.2978177066758504),
+        (0.35232945757779566, 0.3559548680799348),
+        (0.4102788394469044, 0.4155862656077412),
+        (0.4686683781735512, 0.4725458358776743),
+        (0.5263428784299743, 0.5318996991666031),
+        (0.5871310838784735, 0.5914795362558752),
+        (0.6458323134992556, 0.6503497744670448),
+        (0.7049369688901181, 0.708276448501646),
+        (0.7625337320460511, 0.7665968331490604),
+        (0.8210819364239584, 0.8267498674511095),
+        (0.8803272536695689, 0.8839648383371167),
+        (0.9389473275414888, 0.9440461403363014),
+        (1.0, 1.0),
+    ]
+    width, height = image.size
+    cropped_img = image.crop([0, 0, width // 5, height])
+    dets = TWOHUNDRED_THIRTY_MODEL(cropped_img, verbose=False)[0].boxes.data.tolist()
+    loc_200 = sorted(list(filter(lambda x: x[5] == 1.0, dets)), key=lambda x: x[4])[0]
+    loc_200 = loc_200[1] + (loc_200[3] - loc_200[1]) / 1.5
+
+    loc_30 = sorted(list(filter(lambda x: x[5] == 0.0, dets)), key=lambda x: x[4])[0]
+    adjust = int(round(loc_30[1], 0))
+    loc_30 = loc_30[1] + (loc_30[3] - loc_30[1]) / 2
+
+    val = loc_200 - loc_30
+    readj_intervals = [
+        (loc_30 + (x * val), loc_30 + (y * val)) for (x, y) in horizontal_line_intervals
+    ]
+    readj_intervals = [(math.floor(x), math.floor(y)) for (x, y) in readj_intervals]
+    lines = [[x for x in range(a, b + 1)] for (a, b) in readj_intervals]
+    lines = [x for y in lines for x in y]
+    vals = [1 if x in lines else 0 for x in range(0, height + 1)]
+    vals = vals[
+        adjust:
+    ]  # adjusts for the fact that the boxes are in the cropped image not the full image.
+    return vals
 
 
 def get_contiguous_array_sections(array: np.array) -> List[Tuple[Tuple[int], np.array]]:
