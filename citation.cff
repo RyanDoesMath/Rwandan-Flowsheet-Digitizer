@@ -1,0 +1,9 @@
+cff-version: 1.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Folks
+    given-names: Ryan
+    orcid: https://orcid.org/0009-0005-2993-6499
+title: "Rwandan-Flowsheet-Digitizer"
+version: 1.0.0
+date-released: 2023-07-03
