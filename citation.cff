@@ -1,9 +1,25 @@
-cff-version: 1.0
-message: "If you use this software, please cite it as below."
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Rwandan-Flowsheet-Digitizer
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
 authors:
-  - family-names: Folks
-    given-names: Ryan
-    orcid: https://orcid.org/0009-0005-2993-6499
-title: "Rwandan-Flowsheet-Digitizer"
-version: 1.0.0
-date-released: 2023-07-03
+  - given-names: Ryan
+    name-particle: D
+    family-names: Folks
+    email: vcz2aj@virginia.edu
+    orcid: 'https://orcid.org/0009-0005-2993-6499'
+    affiliation: University of Virginia Department of Anesthesiology
+repository-code: >-
+  https://github.com/RyanDoesMath/Rwandan-Flowsheet-Digitizer
+abstract: >-
+  Digitizes an intraoperative flowsheet from the university
+  teaching hospital in Kigali, Rwanda.
+keywords:
+  - Computer Vision
+  - Document Analysis
+date-released: '2023-11-08'
