@@ -50,7 +50,7 @@ class BloodPressure:
         raise ValueError(f"BloodPressure doesn't have a box called {box_type}")
 
 
-def extract_blood_pressure(image) -> dict:
+def extract_blood_pressure(image, do_preprocessing:bool=True) -> dict:
     """Runs methods in order to extract the blood pressure.
 
     Args :
@@ -60,14 +60,14 @@ def extract_blood_pressure(image) -> dict:
               and the values are tuples with (systolic, diastolic).
     """
     cropped_width = crop_legend_out(image).size[0]
-    systolic_pred, diastolic_pred = make_detections(image)
+    systolic_pred, diastolic_pred = make_detections(image, do_preprocessing=do_preprocessing)
     bp_pred = {"systolic": systolic_pred, "diastolic": diastolic_pred}
     bp_pred = find_timestamp_for_bboxes(bp_pred, cropped_width)
     bp_pred = find_bp_value_for_bbox(image, bp_pred)
     return bp_pred
 
 
-def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
+def make_detections(image, do_preprocessing:bool=True) -> Tuple[List[List[float]], List[List[float]]]:
     """Makes detections using the tile_predict method.
 
     Args :
@@ -75,7 +75,10 @@ def make_detections(image) -> Tuple[List[List[float]], List[List[float]]]:
 
     Returns : A tuple with systolic_boxes, distolic_boxes
     """
-    img = preprocess_image(image).copy()
+    if do_preprocessing:
+        img = preprocess_image(image).copy()
+    else:
+        img = image.copy()
     systolic_pred = tiles.tile_predict(
         BLOOD_PRESSURE_MODEL,
         img,
@@ -232,6 +235,7 @@ def adjust_diastolic_preds(preds: List[BoundingBox], image_height: int):
     for box in preds:
         box.bottom = image_height - box.bottom
         box.top = image_height - box.top
+        box.bottom, box.top = box.top, box.bottom
     return preds
 
 
@@ -688,10 +692,13 @@ def timestamp_blood_pressures(
     return stamped_bps
 
 
-def show_detections(image):
+def show_detections(image, do_preprocessing:bool=True):
     """Draws the bp detections on the image."""
-    img = preprocess_image(image).copy()
-    systolic_pred, diastolic_pred = make_detections(image)
+    if do_preprocessing:
+        img = preprocess_image(image).copy()
+    else:
+        img = image.copy()
+    systolic_pred, diastolic_pred = make_detections(image, do_preprocessing=do_preprocessing)
     draw = ImageDraw.Draw(img)
     for box in systolic_pred:
         draw.rectangle(box.get_box(), outline="#fbb584")
